@@ -11,7 +11,12 @@ from telegram.ext import (
     MessageHandler, filters,
     ConversationHandler, ContextTypes
 )
-import gspread
+from core.sheets_client import get_worksheet
+from core.id_service import generate_event_id
+from core.utils import normalize_phone
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 # ==== ВСТАВЬТЕ СВОЙ ТОКЕН ====
 import os
@@ -25,8 +30,7 @@ if not google_creds:
     raise ValueError("GOOGLE_CREDENTIALS environment variable is not set")
 
 creds_dict = json.loads(google_creds)
-gc = gspread.service_account_from_dict(creds_dict)
-sheet = gc.open("Order_Yakutia.media").worksheet("СОБЫТИЯ")
+sheet = get_worksheet("Order_Yakutia.media", "СОБЫТИЯ")
 
 TYPE, CATEGORY, DATE, TIME, PLACE, PEOPLE, NAME, PHONE, DESCRIPTION, CONFIRM = range(10)
 
@@ -267,7 +271,7 @@ async def confirm_application(update: Update, context: ContextTypes.DEFAULT_TYPE
         return CONFIRM
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    event_id = generate_event_id(sheet)
+    event_id = generate_event_id(5)
     context.user_data["event_id"] = event_id
 
     sheet.append_row([
