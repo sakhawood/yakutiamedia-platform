@@ -6,6 +6,7 @@ import datetime
 import json
 import uuid
 import string
+from core.event_service import create_event
 from datetime import datetime
 from telegram.ext import MessageHandler
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
@@ -272,23 +273,10 @@ async def confirm_application(update: Update, context: ContextTypes.DEFAULT_TYPE
         return CONFIRM
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    event_id = generate_event_id(sheet)
+    
+    event_id = create_event(context.user_data)
     context.user_data["event_id"] = event_id
-
-    sheet.append_row([
-    event_id,
-    now,
-    "создано",
-    context.user_data["type"],
-    context.user_data["category"],
-    context.user_data["date"],
-    context.user_data["start_time"],
-    context.user_data["place"],
-    context.user_data["people"],
-    context.user_data["name"],
-    context.user_data["phone"],
-    context.user_data["description"]
-])
+    
     message = (
     f"<b>📥 Новая заявка #{event_id}</b>\n\n"
     f"<b>Тип:</b> {context.user_data['type']}\n"
