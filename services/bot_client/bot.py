@@ -272,7 +272,7 @@ async def confirm_application(update: Update, context: ContextTypes.DEFAULT_TYPE
         return CONFIRM
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    event_id = generate_event_id(5)
+    event_id = generate_event_id(sheet)
     context.user_data["event_id"] = event_id
 
     sheet.append_row([
