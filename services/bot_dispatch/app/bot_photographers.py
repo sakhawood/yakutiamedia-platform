@@ -4,7 +4,6 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackQueryHandler
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import MessageHandler, filters
-from app.locks import event_lock
 from datetime import datetime
 from services.bot_dispatch.app.locks import event_lock
 
