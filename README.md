@@ -1,0 +1,2 @@
+Yakutia Media Platform
+Monorepo architecture
