@@ -1,3 +1,7 @@
+import sys
+import os
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+sys.path.append(BASE_DIR)
 import datetime
 import json
 import uuid
@@ -14,12 +18,9 @@ from telegram.ext import (
 from core.sheets_client import get_worksheet
 from core.id_service import generate_event_id
 from core.utils import normalize_phone
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 # ==== ВСТАВЬТЕ СВОЙ ТОКЕН ====
-import os
+# import os наверху есть по этому выключил
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GROUP_CHAT_ID = -1003824519107 # позже вставим
 
