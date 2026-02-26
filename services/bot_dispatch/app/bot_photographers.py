@@ -425,16 +425,6 @@ async def cancel_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"❌ Вы отменили участие в мероприятии {event_id}"
     )
 
-def register_handlers(application):
-
-    application.add_handler(CommandHandler("start", start))
-
-    application.add_handler(
-        MessageHandler(
-            filters.TEXT,
-            route_text_buttons
-        )
-    )
 async def route_text_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = update.message.text
@@ -562,7 +552,7 @@ async def handle_link_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def check_orders(context):
     print("CHECKING ORDERS")
 
-    sheets = SheetsClient()
+    sheets = context.bot_data["sheets"]
 
     orders = sheets.get_orders()
 
