@@ -21,7 +21,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     rows = sheets.sheet_photographers.get_all_records()
 
     photographer = next(
-        (r for r in rows if str(r["Telegram ID"]) == str(tg_id)),
+        (r for r in rows if str(r["telegram ID"]) == str(tg_id)),
         None
     )
 
@@ -105,7 +105,7 @@ async def my_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     my_rows = [
         r for r in assignments
-        if str(r["Telegram ID"]) == str(tg_id)
+        if str(r["telegram ID"]) == str(tg_id)
         and r["Статус"] == "принял"
     ]
 
@@ -277,7 +277,7 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print("CURRENT ACCEPTS BEFORE:", len(event_assignments), flush=True)
 
         # Уже принял?
-        if any(str(r.get("Telegram ID")) == str(tg_id) for r in event_assignments):
+        if any(str(r.get("telegram ID")) == str(tg_id) for r in event_assignments):
             await query.answer(
                 "Вы уже приняли это мероприятие.",
                 show_alert=True
@@ -349,7 +349,7 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         photographers = sheets.sheet_photographers.get_all_records()
 
         for p in photographers:
-            other_id = p.get("Telegram ID")
+            other_id = p.get("telegram ID")
 
             if not other_id:
                 continue
@@ -388,7 +388,7 @@ async def cancel_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             if (
                 str(row.get("ID события")) == str(event_id)
-                and str(row.get("Telegram ID")) == str(tg_id)
+                and str(row.get("telegram ID")) == str(tg_id)
                 and row.get("Статус") == "принял"
             ):
                 sheets.sheet_assignments.update_cell(idx, 4, "отменил")
@@ -481,7 +481,7 @@ async def handle_link_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             if (
                 str(row.get("ID события")) == str(event_id)
-                and str(row.get("Telegram ID")) == str(tg_id)
+                and str(row.get("telegram ID")) == str(tg_id)
                 and row.get("Статус") == "принял"
             ):
 
@@ -589,7 +589,7 @@ async def check_orders(context):
         # исключаем тех, кому уже отправляли
         candidates = [
             p for p in active_photographers
-            if p["Telegram ID"] not in notified
+            if p["telegram ID"] not in notified
         ]
 
         if not candidates:
@@ -604,16 +604,16 @@ async def check_orders(context):
         next_photographer = candidates[0]
 
         await context.bot.send_message(
-            chat_id=next_photographer["Telegram ID"],
+            chat_id=next_photographer["telegram ID"],
             text=f"Новая заявка:\n{order.get('Описание мероприятия')}"
         )
 
         sheets.log_notification(
             order_id,
-            next_photographer["Telegram ID"]
+            next_photographer["telegram ID"]
         )
 
-        print(f"SENT TO {next_photographer['Telegram ID']}")
+        print(f"SENT TO {next_photographer['telegram ID']}")
 
 def register_handlers(application):
 
