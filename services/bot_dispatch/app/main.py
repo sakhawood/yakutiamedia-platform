@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from telegram.ext import ApplicationBuilder
-from bot_photographers import register_handlers, check_orders
+from .bot_photographers import register_handlers, check_orders
 from config import TELEGRAM_TOKEN
 
 logging.basicConfig(
