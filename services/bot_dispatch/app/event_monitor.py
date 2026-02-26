@@ -9,8 +9,8 @@ async def monitor_events(context):
     try:
         print("=== MONITOR START ===", flush=True)
 
-        events = sheets.sheet_events.get_all_records()
-        assignments = sheets.sheet_assignments.get_all_records()
+        events = sheets.get_orders_sheet().get_all_records()
+        assignments = sheets.get_assignments_sheet().get_all_records()
 
         for idx, event in enumerate(events, start=2):
 
@@ -63,14 +63,13 @@ async def start_distribution(application, sheets, event_id, required, accepted):
             for a in accepted
         }
 
-        photographers = sheets.sheet_photographers.get_all_records()
+        photographers = sheets.get_photographers_sheet().get_all_records()
+        notifications_raw = sheets.get_notifications_sheet().get_all_values()
 
         active_photographers = [
             p for p in photographers
             if str(p.get("Активен", "")).strip() == "1"
         ]
-
-        notifications_raw = sheets.sheet_notifications.get_all_values()
 
         if len(notifications_raw) <= 1:
             notifications = []
@@ -139,11 +138,7 @@ async def start_distribution(application, sheets, event_id, required, accepted):
         )
         print("SENT TO:", tg_id, flush=True)
 
-        sheets.sheet_notifications.append_row([
-            event_id,
-            tg_id,
-            datetime.utcnow().isoformat()
-        ])
+        sheets.add_notification(event_id, tg_id)
 
     except Exception as e:
         print("DISTRIBUTION ERROR:", repr(e), flush=True)
