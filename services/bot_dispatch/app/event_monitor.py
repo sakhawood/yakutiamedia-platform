@@ -112,16 +112,31 @@ async def start_distribution(application, sheets, event_id, required, accepted):
             ]
         ]
 
-        await application.bot.send_message(
-            chat_id=tg_id,
-            text=(
-                f"📌 Новое мероприятие\n\n"
-                f"🆔 ID: {event_id}\n"
-                f"Количество фотографов: {required}"
-            ),
-            reply_markup=InlineKeyboardMarkup(keyboard)
+        event = next(
+            (e for e in sheets.sheet_events.get_all_records()
+            if str(e.get("ID")) == str(event_id)),
+            {}
         )
 
+        text = (
+            f"📌 *Новое мероприятие*\n\n"
+            f"🆔 *ID:* {event_id}\n"
+            f"📂 *Тип:* {event.get('Тип','')}\n"
+            f"🏷 *Категория:* {event.get('Категория','')}\n\n"
+            f"📅 *Дата:* {event.get('Дата мероприятия','')}\n"
+            f"⏰ *Время:* {event.get('Время начала','')}\n"
+            f"📍 *Место:* {event.get('Место проведения','')}\n\n"
+            f"👥 *Ожидаемые гости:* {event.get('Ожидаемые люди','')}\n"
+            f"📸 *Требуется фотографов:* {required}\n\n"
+            f"📝 *Описание:*\n{event.get('Описание мероприятия','')}"
+        )
+
+        await application.bot.send_message(
+            chat_id=tg_id,
+            text=text,
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
         print("SENT TO:", tg_id, flush=True)
 
         sheets.sheet_notifications.append_row([
