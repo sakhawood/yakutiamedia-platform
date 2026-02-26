@@ -4,7 +4,7 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 async def monitor_events(context):
 
-    sheets = context.job.data["sheets"]
+    sheets = context.application.bot_data["sheets"]
 
     try:
         print("=== MONITOR START ===", flush=True)
