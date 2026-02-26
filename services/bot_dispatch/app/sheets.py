@@ -37,6 +37,41 @@ class SheetsClient:
         self.photographers_book = self.client.open(BOOK_PHOTOGRAPHERS)
 
     # =========================
+    # ASSIGNMENTS
+    # =========================
+
+    def get_assignments_sheet(self):
+        return self.events_book.worksheet("НАЗНАЧЕНИЯ")
+
+    def count_accepted(self, order_id: str):
+        sheet = self.get_assignments_sheet()
+        records = sheet.get_all_records()
+
+        count = 0
+        for row in records:
+            if (
+                str(row.get("ID события")) == str(order_id)
+                and str(row.get("Статус")).lower() in ["принял", "accepted"]
+            ):
+                count += 1
+
+        return count
+
+    def add_assignment(self, order_id, telegram_id, name, status):
+        sheet = self.get_assignments_sheet()
+        from datetime import datetime
+
+        sheet.append_row([
+            order_id,
+            telegram_id,
+            name,
+            status,
+            datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+            "",
+            "",
+        ])
+
+    # =========================
     # ORDERS
     # =========================
 
