@@ -96,9 +96,8 @@ class SheetsClient:
                     "Username": row.get("Username"),
                     "Время рассылки (мин)": int(row.get("Время рассылки (мин)") or 0)
                 })
-
-    active.sort(key=lambda x: x["Время рассылки (мин)"])
-    return active
+        active.sort(key=lambda x: x["Время рассылки (мин)"])
+        return active
 
     # =========================
     # NOTIFICATIONS
