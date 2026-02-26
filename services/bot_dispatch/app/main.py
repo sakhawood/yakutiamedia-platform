@@ -2,7 +2,7 @@ import asyncio
 import logging
 from telegram.ext import ApplicationBuilder
 from .bot_photographers import register_handlers, check_orders
-from .config import TELEGRAM_TOKEN
+from .config import BOT_TOKEN
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -12,7 +12,7 @@ logging.basicConfig(
 async def main():
     print("BOT B STARTING")
 
-    application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    ApplicationBuilder().token(BOT_TOKEN).build()
 
     register_handlers(application)
 
