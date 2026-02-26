@@ -1,58 +1,71 @@
 import gspread
 from google.oauth2.service_account import Credentials
-from app.config import GOOGLE_CREDENTIALS
+from datetime import datetime
+import os
 
 
 class SheetsClient:
 
     def __init__(self):
-        creds = Credentials.from_service_account_info(
-            GOOGLE_CREDENTIALS,
-            scopes=[
-                "https://www.googleapis.com/auth/spreadsheets",
-                "https://www.googleapis.com/auth/drive"
-            ]
+
+        print("INIT SHEETS START")
+
+        creds_dict = {
+            "type": os.getenv("GOOGLE_TYPE"),
+            "project_id": os.getenv("GOOGLE_PROJECT_ID"),
+            "private_key_id": os.getenv("GOOGLE_PRIVATE_KEY_ID"),
+            "private_key": os.getenv("GOOGLE_PRIVATE_KEY").replace("\\n", "\n"),
+            "client_email": os.getenv("GOOGLE_CLIENT_EMAIL"),
+            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+            "auth_uri": os.getenv("GOOGLE_AUTH_URI"),
+            "token_uri": os.getenv("GOOGLE_TOKEN_URI"),
+            "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_CERT_URL"),
+            "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_CERT_URL")
+        }
+
+        credentials = Credentials.from_service_account_info(
+            creds_dict,
+            scopes=["https://www.googleapis.com/auth/spreadsheets"]
         )
 
-        self.gc = gspread.authorize(creds)
+        client = gspread.authorize(credentials)
 
-        # Книги
-        self.book_events = self.gc.open("Order_Yakutia.media")
-        self.book_photographers = self.gc.open("Order_Photographers")
+        self.orders_book = client.open("Order_YakutiaMedia")
+        self.photographers_book = client.open("Order_Photographer")
 
-        # Листы Order_Yakutia.media
-        self.sheet_events = self.book_events.worksheet("СОБЫТИЯ")
-        self.sheet_assignments = self.book_events.worksheet("НАЗНАЧЕНИЯ")
+        self.orders_sheet = self.orders_book.sheet1
+        self.photographers_sheet = self.photographers_book.worksheet("Photographers")
+        self.notifications_sheet = self.photographers_book.worksheet("NOTIFICATIONS")
+        self.assignments_sheet = self.orders_book.worksheet("НАЗНАЧЕНИЕ")
 
-        # Листы Order_Photographers
-        self.sheet_photographers = self.book_photographers.worksheet("ФОТОГРАФЫ")
-        self.sheet_notifications = self.book_photographers.worksheet("NOTIFICATIONS")
+    # ---------------- ORDERS ----------------
 
-    def get_active_events(self):
-        rows = self.sheet_events.get_all_records()
-        return [
-            row for row in rows
-            if row.get("Статус") == "в работу"
-        ]
-
-    def get_photographers(self):
-        return self.sheet_photographers.get_all_records()
-
-    def append_assignment(self, row):
-        self.sheet_assignments.append_row(row)
-
-    def mark_distributed(self, order_id):
+    def get_orders(self):
+        return self.orders_sheet.get_all_records()
 
     def count_accepted(self, order_id):
-    records = self.assignments_sheet.get_all_records()
+        records = self.assignments_sheet.get_all_records()
 
-    count = 0
-    for row in records:
-        if str(row.get("ID события")) == str(order_id):
-            count += 1
+        count = 0
+        for row in records:
+            if str(row.get("ID события")) == str(order_id):
+                count += 1
 
-    return count
+        return count
 
+    # ---------------- PHOTOGRAPHERS ----------------
+
+    def get_active_photographers(self):
+        records = self.photographers_sheet.get_all_records()
+
+        result = []
+        for row in records:
+            if str(row.get("Активен")).lower() == "true":
+                result.append(row)
+
+        return result
+
+    # ---------------- NOTIFICATIONS ----------------
 
     def get_notified_photographers(self, order_id):
         records = self.notifications_sheet.get_all_records()
@@ -64,27 +77,9 @@ class SheetsClient:
 
         return result
 
-
-    def get_active_photographers(self):
-        records = self.photographers_sheet.get_all_records()
-
-        return [
-            row for row in records
-            if str(row.get("Активен")).lower() == "true"
-        ]
-
-
     def log_notification(self, order_id, telegram_id):
-        from datetime import datetime
-
         self.notifications_sheet.append_row([
             order_id,
             telegram_id,
             datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ])
-
-    # Найти строку по ID
-    row = self.find_order_row(order_id)
-
-    # Вписать текущее время в колонку distributed_at
-    self.orders_sheet.update_cell(row, 16, "SENT")
