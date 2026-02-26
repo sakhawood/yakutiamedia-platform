@@ -589,7 +589,7 @@ async def check_orders(context):
         # исключаем тех, кому уже отправляли
         candidates = [
             p for p in active_photographers
-            if p["Telegram ID"] not in notified
+            if str(p["Telegram ID"]) not in notified:
         ]
 
         if not candidates:

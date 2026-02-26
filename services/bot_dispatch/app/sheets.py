@@ -91,11 +91,12 @@ class SheetsClient:
         for row in records:
             if str(row.get("Активен")).lower() in ["true", "да", "1"]:
                 active.append({
-                    "Telegram ID": row.get("Telegram ID"),
+                    "Telegram ID": str(row.get("Telegram ID")).strip(),
                     "ИМЯ": row.get("ИМЯ"),
                     "Username": row.get("Username"),
                     "Время рассылки (мин)": int(row.get("Время рассылки (мин)") or 0)
                 })
+
         active.sort(key=lambda x: x["Время рассылки (мин)"])
         return active
 
@@ -135,8 +136,8 @@ class SheetsClient:
         notified = set()
 
         for row in records:
-            if str(row.get("ID события")) == str(order_id):
-                notified.add(str(row.get("Telegram ID")))
+            if str(row.get("ID события")).strip() == str(order_id).strip():
+                notified.add(str(row.get("Telegram ID")).strip())
 
         return notified
     
