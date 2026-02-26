@@ -8,6 +8,11 @@ async def main():
 
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    from .sheets import SheetsClient
+
+    sheets = SheetsClient()
+    application.bot_data["sheets"] = sheets
+
     application.job_queue.run_repeating(
         check_orders,
         interval=CHECK_INTERVAL,
