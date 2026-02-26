@@ -128,17 +128,17 @@ class SheetsClient:
         return self.photographers_book.worksheet("NOTIFICATIONS")
 
 
-    def get_notified_photographers(self, order_id: str):
+    def get_notified_photographers(self, order_id):
         sheet = self.get_notifications_sheet()
-        rows = sheet.get_all_records()
+        records = sheet.get_all_records()
 
-        notified_ids = []
+        notified = set()
 
-        for row in rows:
+        for row in records:
             if str(row.get("ID события")) == str(order_id):
-                notified_ids.append(str(row.get("Telegram ID")))
+                notified.add(str(row.get("Telegram ID")))
 
-        return notified_ids
+        return notified
     
     def log_notification(self, order_id, telegram_id):
         sheet = self.get_notifications_sheet()
