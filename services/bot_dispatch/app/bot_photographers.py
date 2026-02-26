@@ -6,6 +6,8 @@ from telegram import ReplyKeyboardMarkup
 from telegram.ext import MessageHandler, filters
 from datetime import datetime
 from services.bot_dispatch.app.locks import event_lock
+from sheets import SheetsClient
+
 
 GROUP_CHAT_ID = -1003824519107 # ← вставь реальный ID группы заявки_Yakutia.media
 
@@ -556,6 +558,62 @@ async def handle_link_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         print("GROUP SEND ERROR:", e, flush=True)
+
+async def check_orders(context):
+    print("CHECKING ORDERS")
+
+    sheets = SheetsClient()
+
+    orders = sheets.get_orders()
+
+    for order in orders:
+
+        if order.get("Статус") != "в работу":
+            continue
+
+        order_id = order.get("ID")
+        required = int(order.get("Количество фотографов") or 0)
+
+        accepted = sheets.count_accepted(order_id)
+
+        if accepted >= required:
+            print(f"ORDER {order_id} FULLY STAFFED")
+            continue
+
+        print(f"ORDER {order_id} NEEDS PHOTOGRAPHERS")
+
+        active_photographers = sheets.get_active_photographers()
+
+        notified = sheets.get_notified_photographers(order_id)
+
+        # исключаем тех, кому уже отправляли
+        candidates = [
+            p for p in active_photographers
+            if p["Telegram ID"] not in notified
+        ]
+
+        if not candidates:
+            print("NO NEW PHOTOGRAPHERS AVAILABLE")
+            continue
+
+        # сортировка по времени рассылки
+        candidates.sort(
+            key=lambda x: int(x.get("Время рассылки (мин)") or 0)
+        )
+
+        next_photographer = candidates[0]
+
+        await context.bot.send_message(
+            chat_id=next_photographer["Telegram ID"],
+            text=f"Новая заявка:\n{order.get('Описание мероприятия')}"
+        )
+
+        sheets.log_notification(
+            order_id,
+            next_photographer["Telegram ID"]
+        )
+
+        print(f"SENT TO {next_photographer['Telegram ID']}")
 
 def register_handlers(application):
 

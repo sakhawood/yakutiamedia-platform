@@ -1,38 +1,32 @@
+import asyncio
+import logging
 from telegram.ext import ApplicationBuilder
-from app.config import BOT_TOKEN
-from app.sheets import SheetsClient
-from app.event_monitor import monitor_events
-from app.bot_photographers import register_handlers
+from bot_photographers import register_handlers, check_orders
+from config import TELEGRAM_TOKEN
 
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 
-def main():
-    print("ENTERING MAIN", flush=True)
+async def main():
+    print("BOT B STARTING")
 
-    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
-    print("JOB QUEUE:", application.job_queue)
-
-    sheets = SheetsClient()
-
-    # 👇 ВАЖНО: передаем sheets во все handlers
-    application.bot_data["sheets"] = sheets
-
-    # 👇 регистрируем команды и callbacks
     register_handlers(application)
 
+    # Проверка заявок каждые 30 секунд
     application.job_queue.run_repeating(
-        monitor_events,
-        interval=60,
-        first=10,
-        name="event_monitor",
-        job_kwargs={"max_instances": 1},
-        data={"sheets": sheets},
+        check_orders,
+        interval=30,
+        first=10
     )
 
-    print("Bot started...", flush=True)
-
-    application.run_polling()
-
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+    await application.idle()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

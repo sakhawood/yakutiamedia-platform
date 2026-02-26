@@ -40,3 +40,51 @@ class SheetsClient:
 
     def append_assignment(self, row):
         self.sheet_assignments.append_row(row)
+
+    def mark_distributed(self, order_id):
+
+    def count_accepted(self, order_id):
+    records = self.assignments_sheet.get_all_records()
+
+    count = 0
+    for row in records:
+        if str(row.get("ID события")) == str(order_id):
+            count += 1
+
+    return count
+
+
+    def get_notified_photographers(self, order_id):
+        records = self.notifications_sheet.get_all_records()
+
+        result = []
+        for row in records:
+            if str(row.get("ID события")) == str(order_id):
+                result.append(str(row.get("Telegram ID")))
+
+        return result
+
+
+    def get_active_photographers(self):
+        records = self.photographers_sheet.get_all_records()
+
+        return [
+            row for row in records
+            if str(row.get("Активен")).lower() == "true"
+        ]
+
+
+    def log_notification(self, order_id, telegram_id):
+        from datetime import datetime
+
+        self.notifications_sheet.append_row([
+            order_id,
+            telegram_id,
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ])
+
+    # Найти строку по ID
+    row = self.find_order_row(order_id)
+
+    # Вписать текущее время в колонку distributed_at
+    self.orders_sheet.update_cell(row, 16, "SENT")
