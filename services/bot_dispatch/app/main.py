@@ -1,15 +1,15 @@
-import asyncio
 from telegram.ext import ApplicationBuilder
 from .config import BOT_TOKEN, CHECK_INTERVAL
 from .event_monitor import monitor_events
 from .bot_photographers import register_handlers
+from .sheets import SheetsClient
 
-async def main():
+
+def main():
     print("BOT B STARTING")
 
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    from .sheets import SheetsClient
     sheets = SheetsClient()
     application.bot_data["sheets"] = sheets
 
@@ -22,8 +22,8 @@ async def main():
         first=10
     )
 
-    await application.run_polling()
+    application.run_polling()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
