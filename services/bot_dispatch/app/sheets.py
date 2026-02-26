@@ -139,3 +139,12 @@ class SheetsClient:
                 notified_ids.append(str(row.get("Telegram ID")))
 
         return notified_ids
+    
+    def log_notification(self, order_id, telegram_id):
+        sheet = self.get_notifications_sheet()
+
+        sheet.append_row([
+            order_id,
+            telegram_id,
+            datetime.now().isoformat()
+        ])
