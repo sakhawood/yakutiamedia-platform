@@ -126,7 +126,7 @@ class SheetsClient:
         ])
     
     def get_notifications_sheet(self):
-    return self.photographers_book.worksheet("NOTIFICATIONS")
+        return self.photographers_book.worksheet("NOTIFICATIONS")
 
 
     def get_notified_photographers(self, order_id: str):
