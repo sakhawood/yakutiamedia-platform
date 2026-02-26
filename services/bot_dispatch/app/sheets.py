@@ -142,9 +142,7 @@ class SheetsClient:
     
     def log_notification(self, order_id, telegram_id):
         sheet = self.get_notifications_sheet()
-
         sheet.append_row([
             order_id,
-            telegram_id,
-            datetime.now().isoformat()
+            telegram_id
         ])
