@@ -37,7 +37,7 @@ class SheetsClient:
     # =========================
 
     def get_orders_sheet(self):
-        return self.events_book.worksheet("ЗАЯВКИ")
+        return self.events_book.worksheet("СОБЫТИЯ")
 
     def get_assignments_sheet(self):
         return self.events_book.worksheet("НАЗНАЧЕНИЯ")
