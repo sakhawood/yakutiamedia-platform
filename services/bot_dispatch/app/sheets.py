@@ -91,14 +91,14 @@ class SheetsClient:
         for row in records:
             if str(row.get("Активен")).lower() in ["true", "да", "1"]:
                 active.append({
-                    "telegram_id": row.get("Telegram ID"),
-                    "name": row.get("ИМЯ"),
-                    "username": row.get("Username"),
-                    "delay": int(row.get("Время рассылки (мин)") or 0)
+                    "Telegram ID": row.get("Telegram ID"),
+                    "ИМЯ": row.get("ИМЯ"),
+                    "Username": row.get("Username"),
+                    "Время рассылки (мин)": int(row.get("Время рассылки (мин)") or 0)
                 })
 
-        active.sort(key=lambda x: x["delay"])
-        return active
+    active.sort(key=lambda x: x["Время рассылки (мин)"])
+    return active
 
     # =========================
     # NOTIFICATIONS
