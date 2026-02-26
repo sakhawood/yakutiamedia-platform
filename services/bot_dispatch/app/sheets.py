@@ -36,6 +36,59 @@ class SheetsClient:
         self.events_book = self.client.open(BOOK_EVENTS)
         self.photographers_book = self.client.open(BOOK_PHOTOGRAPHERS)
 
+    def get_photographers_book(self):
+        return self.client.open("Order_Photographers")
+
+    def get_photographers_sheet(self):
+        book = self.get_photographers_book()
+        return book.worksheet("Фотографы")
+
+    def get_notifications_sheet(self):
+        book = self.get_photographers_book()
+        return book.worksheet("NOTIFICATIONS")
+
+    def get_active_photographers(self):
+        sheet = self.get_photographers_sheet()
+        records = sheet.get_all_records()
+
+        active = []
+
+        for row in records:
+            if str(row.get("Активен")).lower() in ["true", "да", "1"]:
+                active.append({
+                    "telegram_id": row.get("Telegram ID"),
+                    "name": row.get("ИМЯ"),
+                    "username": row.get("Username"),
+                    "delay": int(row.get("Время рассылки (мин)") or 0)
+                })
+
+        # сортировка по времени рассылки
+        active.sort(key=lambda x: x["delay"])
+
+        return active
+
+      def already_notified(self, order_id, telegram_id):
+        sheet = self.get_notifications_sheet()
+        records = sheet.get_all_records()
+
+        for row in records:
+            if (
+                str(row.get("ID события")) == str(order_id)
+                and str(row.get("Telegram ID")) == str(telegram_id)
+            ):
+                return True
+
+        return False
+
+    def add_notification(self, order_id, telegram_id):
+        from datetime import datetime
+        sheet = self.get_notifications_sheet()
+        sheet.append_row([
+            order_id,
+            telegram_id,
+            datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        ])
+
     # =========================
     # ASSIGNMENTS
     # =========================
