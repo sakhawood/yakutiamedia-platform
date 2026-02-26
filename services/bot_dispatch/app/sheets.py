@@ -159,23 +159,23 @@ class SheetsClient:
     # =========================
 
     def reset_notifications_except(self, order_id, keep_telegram_id):
-    sheet = self.get_notifications_sheet()
-    rows = sheet.get_all_values()
+        sheet = self.get_notifications_sheet()
+        rows = sheet.get_all_values()
 
-    if len(rows) <= 1:
-        return
+        if len(rows) <= 1:
+            return
 
-    headers = rows[0]
-    cleaned = [headers]
+        headers = rows[0]
+        cleaned = [headers]
 
-    for row in rows[1:]:
-        if (
-            str(row[0]) == str(order_id)
-            and str(row[1]) != str(keep_telegram_id)
-        ):
-            continue  # удаляем уведомление
+        for row in rows[1:]:
+            if (
+                str(row[0]) == str(order_id)
+                and str(row[1]) != str(keep_telegram_id)
+            ):
+                continue  # удаляем уведомление
 
-        cleaned.append(row)
+            cleaned.append(row)
 
-    sheet.clear()
-    sheet.append_rows(cleaned)
+        sheet.clear()
+        sheet.append_rows(cleaned)
