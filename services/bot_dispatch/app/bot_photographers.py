@@ -417,6 +417,9 @@ async def cancel_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         3,
                         "в работу"
                     )
+                    sheets.reset_notifications_except(event_id, tg_id)
+                    print("NOTIFICATIONS RESET FOR EVENT", event_id, flush=True)
+                    
 
                 break
 
