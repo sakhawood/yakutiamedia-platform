@@ -124,3 +124,19 @@ class SheetsClient:
             telegram_id,
             datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         ])
+    
+    def get_notifications_sheet(self):
+    return self.photographers_book.worksheet("NOTIFICATIONS")
+
+
+    def get_notified_photographers(self, order_id: str):
+        sheet = self.get_notifications_sheet()
+        rows = sheet.get_all_records()
+
+        notified_ids = []
+
+        for row in rows:
+            if str(row.get("ID события")) == str(order_id):
+                notified_ids.append(str(row.get("Telegram ID")))
+
+        return notified_ids
