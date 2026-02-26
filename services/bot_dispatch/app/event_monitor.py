@@ -55,8 +55,6 @@ async def monitor_events(context):
 
 async def start_distribution(application, sheets, event_id, required, accepted):
 
-    print("Distributing event", event_id, flush=True)
-
     try:
         accepted_ids = {
             str(a.get("Telegram ID"))
@@ -64,28 +62,13 @@ async def start_distribution(application, sheets, event_id, required, accepted):
         }
 
         photographers = sheets.get_photographers_sheet().get_all_records()
-        notifications_raw = sheets.get_notifications_sheet().get_all_values()
 
         active_photographers = [
             p for p in photographers
             if str(p.get("Активен", "")).strip() == "1"
         ]
 
-        if len(notifications_raw) <= 1:
-            notifications = []
-        else:
-            headers = notifications_raw[0]
-            notifications = [
-                dict(zip(headers, row))
-                for row in notifications_raw[1:]
-                if len(row) == len(headers)
-            ]
-
-        notified_ids = {
-            str(n.get("Telegram ID"))
-            for n in notifications
-            if str(n.get("ID события")) == event_id
-        }
+        notified_ids = sheets.get_notified_photographers(event_id)
 
         eligible = [
             p for p in active_photographers
@@ -97,10 +80,15 @@ async def start_distribution(application, sheets, event_id, required, accepted):
             print("NO ELIGIBLE PHOTOGRAPHERS", flush=True)
             return
 
-        # ВОЛНОВАЯ модель — только один за цикл
         p = eligible[0]
 
         tg_id = int(str(p.get("Telegram ID")).split(".")[0])
+
+        events = sheets.get_orders()
+        event = next(
+            (e for e in events if str(e.get("ID")) == str(event_id)),
+            {}
+        )
 
         keyboard = [
             [
@@ -111,34 +99,26 @@ async def start_distribution(application, sheets, event_id, required, accepted):
             ]
         ]
 
-        event = next(
-            (e for e in sheets.sheet_events.get_all_records()
-            if str(e.get("ID")) == str(event_id)),
-            {}
-        )
-
         text = (
-            f"📌 *Новое мероприятие*\n\n"
-            f"🆔 *ID:* {event_id}\n"
-            f"📂 *Тип:* {event.get('Тип','')}\n"
-            f"🏷 *Категория:* {event.get('Категория','')}\n\n"
-            f"📅 *Дата:* {event.get('Дата мероприятия','')}\n"
-            f"⏰ *Время:* {event.get('Время начала','')}\n"
-            f"📍 *Место:* {event.get('Место проведения','')}\n\n"
-            f"👥 *Ожидаемые гости:* {event.get('Ожидаемые люди','')}\n"
-            f"📸 *Требуется фотографов:* {required}\n\n"
-            f"📝 *Описание:*\n{event.get('Описание мероприятия','')}"
+            f"📌 Новое мероприятие\n\n"
+            f"🆔 ID: {event_id}\n"
+            f"📂 Тип: {event.get('Тип','')}\n"
+            f"🏷 Категория: {event.get('Категория','')}\n\n"
+            f"📅 Дата: {event.get('Дата мероприятия','')}\n"
+            f"⏰ Время: {event.get('Время начала','')}\n"
+            f"📍 Место: {event.get('Место проведения','')}\n\n"
+            f"📸 Требуется фотографов: {required}\n"
         )
 
         await application.bot.send_message(
             chat_id=tg_id,
             text=text,
-            parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
-        print("SENT TO:", tg_id, flush=True)
 
         sheets.add_notification(event_id, tg_id)
+
+        print("SENT TO:", tg_id, flush=True)
 
     except Exception as e:
         print("DISTRIBUTION ERROR:", repr(e), flush=True)
