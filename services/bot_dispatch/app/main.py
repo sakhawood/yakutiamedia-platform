@@ -1,7 +1,7 @@
 import asyncio
 from telegram.ext import ApplicationBuilder
 from .config import BOT_TOKEN, CHECK_INTERVAL
-from .bot_photographers import check_orders
+from .event_monitor import monitor_events
 
 async def main():
     print("BOT B STARTING")
@@ -14,7 +14,7 @@ async def main():
     application.bot_data["sheets"] = sheets
 
     application.job_queue.run_repeating(
-        check_orders,
+        monitor_events,
         interval=CHECK_INTERVAL,
         first=10
     )
