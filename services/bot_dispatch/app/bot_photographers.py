@@ -6,7 +6,7 @@ from telegram import ReplyKeyboardMarkup
 from telegram.ext import MessageHandler, filters
 from datetime import datetime
 from services.bot_dispatch.app.locks import event_lock
-from sheets import SheetsClient
+from .sheets import SheetsClient
 
 
 GROUP_CHAT_ID = -1003824519107 # ← вставь реальный ID группы заявки_Yakutia.media
