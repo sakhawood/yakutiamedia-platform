@@ -77,7 +77,7 @@ class SheetsClient:
     # =========================
 
     def get_photographers_sheet(self):
-        return self.photographers_book.worksheet("Фотографы")
+        return self.photographers_book.worksheet("ФОТОГРАФЫ")
 
     def get_notifications_sheet(self):
         return self.photographers_book.worksheet("NOTIFICATIONS")
