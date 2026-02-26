@@ -1,25 +1,9 @@
-import asyncio
 from datetime import datetime
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
-# Кэш уже обработанных событий (в памяти контейнера)
-PROCESSED_EVENTS = set()
-
 
 async def monitor_events(context):
-    for idx, event in enumerate(events, start=2):
 
-    print("EVENT RAW:", event, flush=True)
-
-    event_id = str(event.get("ID")).strip()
-    status_raw = event.get("Статус")
-
-    print("STATUS RAW:", repr(status_raw), flush=True)
-
-    status = str(status_raw or "").strip().lower()
-
-    print("STATUS NORMALIZED:", status, flush=True)
-    #
     sheets = context.job.data["sheets"]
 
     try:
@@ -31,12 +15,10 @@ async def monitor_events(context):
         for idx, event in enumerate(events, start=2):
 
             event_id = str(event.get("ID")).strip()
-            status = str(event.get("Статус")).strip()
+            status = str(event.get("Статус") or "").strip()
 
             if status != "в работу":
                 continue
-
-        print("REQUIRED RAW:", event.get("Количество фотографов"), flush=True)
 
             try:
                 required = int(event.get("Количество фотографов") or 0)
@@ -46,7 +28,6 @@ async def monitor_events(context):
             if required <= 0:
                 continue
 
-            # Считаем принятых
             accepted = [
                 a for a in assignments
                 if str(a.get("ID события")) == event_id
@@ -58,7 +39,6 @@ async def monitor_events(context):
                 sheets.sheet_events.update_cell(idx, 3, "укомплектовано")
                 continue
 
-            # Запускаем распределение
             await start_distribution(
                 context.application,
                 sheets,
@@ -72,7 +52,7 @@ async def monitor_events(context):
     except Exception as e:
         print("MONITOR ERROR:", repr(e), flush=True)
 
-print("CALLING DISTRIBUTION FOR:", event_id, flush=True)
+
 async def start_distribution(application, sheets, event_id, required, accepted):
 
     print("Distributing event", event_id, flush=True)
@@ -89,9 +69,7 @@ async def start_distribution(application, sheets, event_id, required, accepted):
             p for p in photographers
             if str(p.get("Активен", "")).strip() == "1"
         ]
-        print("ACTIVE PHOTOGRAPHERS:", active_photographers, flush=True)
 
-        # Загружаем уведомления
         notifications_raw = sheets.sheet_notifications.get_all_values()
 
         if len(notifications_raw) <= 1:
@@ -109,8 +87,7 @@ async def start_distribution(application, sheets, event_id, required, accepted):
             for n in notifications
             if str(n.get("ID события")) == event_id
         }
-        print("ELIGIBLE BEFORE CHECK:", eligible, flush=True)
-        # Кому можно отправлять?
+
         eligible = [
             p for p in active_photographers
             if str(p.get("Telegram ID")) not in accepted_ids
@@ -121,36 +98,37 @@ async def start_distribution(application, sheets, event_id, required, accepted):
             print("NO ELIGIBLE PHOTOGRAPHERS", flush=True)
             return
 
-        for p in eligible:
+        # ВОЛНОВАЯ модель — только один за цикл
+        p = eligible[0]
 
-            tg_id = int(str(p.get("Telegram ID")).split(".")[0])
+        tg_id = int(str(p.get("Telegram ID")).split(".")[0])
 
-            keyboard = [
-                [
-                    InlineKeyboardButton(
-                        "✅ Принять",
-                        callback_data=f"accept_{event_id}"
-                    )
-                ]
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "✅ Принять",
+                    callback_data=f"accept_{event_id}"
+                )
             ]
+        ]
 
-            msg = await application.bot.send_message(
-                chat_id=tg_id,
-                text=(
-                    f"📌 Новое мероприятие\n\n"
-                    f"🆔 ID: {event_id}\n"
-                    f"Количество фотографов: {required}"
-                ),
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
+        await application.bot.send_message(
+            chat_id=tg_id,
+            text=(
+                f"📌 Новое мероприятие\n\n"
+                f"🆔 ID: {event_id}\n"
+                f"Количество фотографов: {required}"
+            ),
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
 
-            print("SENT TO:", tg_id, flush=True)
+        print("SENT TO:", tg_id, flush=True)
 
-            sheets.sheet_notifications.append_row([
-                event_id,
-                tg_id,
-                datetime.utcnow().isoformat()
-            ])
+        sheets.sheet_notifications.append_row([
+            event_id,
+            tg_id,
+            datetime.utcnow().isoformat()
+        ])
 
     except Exception as e:
         print("DISTRIBUTION ERROR:", repr(e), flush=True)
