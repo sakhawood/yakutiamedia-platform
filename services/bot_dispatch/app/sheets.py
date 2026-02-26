@@ -8,10 +8,6 @@ from datetime import datetime
 print("INIT SHEETS START")
 
 
-BOOK_EVENTS = "Order_Yakutia.media"
-BOOK_PHOTOGRAPHERS = "Order_Photographers"
-
-
 class SheetsClient:
     def __init__(self):
         credentials_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
@@ -33,19 +29,58 @@ class SheetsClient:
 
         self.client = gspread.authorize(credentials)
 
-        self.events_book = self.client.open(BOOK_EVENTS)
-        self.photographers_book = self.client.open(BOOK_PHOTOGRAPHERS)
+        self.events_book = self.client.open("Order_Yakutia.media")
+        self.photographers_book = self.client.open("Order_Photographers")
 
-    def get_photographers_book(self):
-        return self.client.open("Order_Photographers")
+    # =========================
+    # EVENTS
+    # =========================
+
+    def get_orders_sheet(self):
+        return self.events_book.worksheet("ЗАЯВКИ")
+
+    def get_assignments_sheet(self):
+        return self.events_book.worksheet("НАЗНАЧЕНИЯ")
+
+    def get_orders(self):
+        sheet = self.get_orders_sheet()
+        return sheet.get_all_records()
+
+    def count_accepted(self, order_id):
+        sheet = self.get_assignments_sheet()
+        records = sheet.get_all_records()
+
+        count = 0
+        for row in records:
+            if (
+                str(row.get("ID события")) == str(order_id)
+                and str(row.get("Статус")).lower() in ["принял", "accepted"]
+            ):
+                count += 1
+
+        return count
+
+    def add_assignment(self, order_id, telegram_id, name, status):
+        sheet = self.get_assignments_sheet()
+        sheet.append_row([
+            order_id,
+            telegram_id,
+            name,
+            status,
+            datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+            "",
+            "",
+        ])
+
+    # =========================
+    # PHOTOGRAPHERS
+    # =========================
 
     def get_photographers_sheet(self):
-        book = self.get_photographers_book()
-        return book.worksheet("Фотографы")
+        return self.photographers_book.worksheet("Фотографы")
 
     def get_notifications_sheet(self):
-        book = self.get_photographers_book()
-        return book.worksheet("NOTIFICATIONS")
+        return self.photographers_book.worksheet("NOTIFICATIONS")
 
     def get_active_photographers(self):
         sheet = self.get_photographers_sheet()
@@ -62,12 +97,14 @@ class SheetsClient:
                     "delay": int(row.get("Время рассылки (мин)") or 0)
                 })
 
-        # сортировка по времени рассылки
         active.sort(key=lambda x: x["delay"])
-
         return active
 
-      def already_notified(self, order_id, telegram_id):
+    # =========================
+    # NOTIFICATIONS
+    # =========================
+
+    def already_notified(self, order_id, telegram_id):
         sheet = self.get_notifications_sheet()
         records = sheet.get_all_records()
 
@@ -81,85 +118,9 @@ class SheetsClient:
         return False
 
     def add_notification(self, order_id, telegram_id):
-        from datetime import datetime
         sheet = self.get_notifications_sheet()
         sheet.append_row([
             order_id,
             telegram_id,
             datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-        ])
-
-    # =========================
-    # ASSIGNMENTS
-    # =========================
-
-    def get_assignments_sheet(self):
-        return self.events_book.worksheet("НАЗНАЧЕНИЯ")
-
-    def count_accepted(self, order_id: str):
-        sheet = self.get_assignments_sheet()
-        records = sheet.get_all_records()
-
-        count = 0
-        for row in records:
-            if (
-                str(row.get("ID события")) == str(order_id)
-                and str(row.get("Статус")).lower() in ["принял", "accepted"]
-            ):
-                count += 1
-
-        return count
-
-    def add_assignment(self, order_id, telegram_id, name, status):
-        sheet = self.get_assignments_sheet()
-        from datetime import datetime
-
-        sheet.append_row([
-            order_id,
-            telegram_id,
-            name,
-            status,
-            datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
-            "",
-            "",
-        ])
-
-    # =========================
-    # ORDERS
-    # =========================
-
-    def get_orders(self):
-        sheet = self.events_book.sheet1
-        data = sheet.get_all_records()
-        return data
-
-    def update_order_cell(self, row: int, col: int, value):
-        sheet = self.events_book.sheet1
-        sheet.update_cell(row, col, value)
-
-    # =========================
-    # PHOTOGRAPHERS
-    # =========================
-
-    def get_photographers(self):
-        sheet = self.photographers_book.sheet1
-        return sheet.get_all_records()
-
-    # =========================
-    # NOTIFICATIONS
-    # =========================
-
-    def get_notifications_sheet(self):
-        return self.photographers_book.worksheet("NOTIFICATIONS")
-
-    def get_notifications(self):
-        sheet = self.get_notifications_sheet()
-        return sheet.get_all_records()
-
-    def add_notification(self, event_id: str, telegram_id: str):
-        sheet = self.get_notifications_sheet()
-        sheet.append_row([
-            event_id,
-            telegram_id,
-            datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
         ])
