@@ -152,7 +152,16 @@ async def monitor_events(context):
                     WHERE id=$2
                 """, next_priority, event_id)
 
+    async with pool.acquire() as conn:
+
+    events = await conn.fetch("""
+        SELECT *
+        FROM events
+        WHERE status='в работу'
+    """)
+
+    print("EVENTS FOUND:", len(events), flush=True)
+
     except Exception as e:
         print("MONITOR ERROR:", repr(e), flush=True)
         
-print("EVENTS FOUND:", len(events), flush=True)
