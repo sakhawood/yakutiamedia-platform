@@ -6,6 +6,10 @@ import datetime
 import json
 import uuid
 import string
+import asyncio
+import asyncpg
+import random
+import string
 from core.event_service import create_event
 from datetime import datetime
 from telegram.ext import MessageHandler
@@ -16,7 +20,6 @@ from telegram.ext import (
     MessageHandler, filters,
     ConversationHandler, ContextTypes
 )
-from core.sheets_client import get_worksheet
 from core.id_service import generate_event_id
 from core.utils import normalize_phone
 
@@ -25,14 +28,20 @@ from core.utils import normalize_phone
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GROUP_CHAT_ID = -1003824519107 # позже вставим
 
-# ==== Google Sheets ====
-google_creds = os.getenv("GOOGLE_CREDENTIALS")
+_pool = None
 
-if not google_creds:
-    raise ValueError("GOOGLE_CREDENTIALS environment variable is not set")
+async def get_pool():
+    global _pool
+    if _pool is None:
+        _pool = await asyncpg.create_pool(
+            dsn=os.getenv("DATABASE_URL"),
+            ssl="require"
+        )
+    return _pool
 
-creds_dict = json.loads(google_creds)
-sheet = get_worksheet("Order_Yakutia.media", "СОБЫТИЯ")
+def generate_event_id():
+    chars = string.digits + string.ascii_uppercase
+    return ''.join(random.choices(chars, k=5))
 
 TYPE, CATEGORY, DATE, TIME, PLACE, PEOPLE, NAME, PHONE, DESCRIPTION, CONFIRM = range(10)
 
@@ -261,34 +270,60 @@ async def confirm_application(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if choice == "✏ Изменить":
         keyboard = [["🚀 Старт заявки"]]
-
         await update.message.reply_text(
             "Заполните заявку заново.",
             reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         )
-
         return ConversationHandler.END
 
     if choice != "✅ Подтвердить":
         return CONFIRM
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    event_id = create_event(context.user_data)
-    context.user_data["event_id"] = event_id
-    
+    pool = context.application.bot_data["db_pool"]
+
+    event_id = generate_event_id()
+
+    async with pool.acquire() as conn:
+
+        await conn.execute("""
+            INSERT INTO events(
+                id,
+                event_date,
+                start_time,
+                location,
+                type,
+                category,
+                description,
+                client_name,
+                client_phone,
+                required_photographers,
+                status
+            )
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'в работу')
+        """,
+            event_id,
+            context.user_data["date"],
+            context.user_data["start_time"],
+            context.user_data["place"],
+            context.user_data["type"],
+            context.user_data["category"],
+            context.user_data["description"],
+            context.user_data["name"],
+            context.user_data["phone"],
+            1   # ← количество фотографов по умолчанию
+        )
+
     message = (
-    f"<b>📥 Новая заявка #{event_id}</b>\n\n"
-    f"<b>Тип:</b> {context.user_data['type']}\n"
-    f"<b>Категория:</b> {context.user_data['category']}\n"
-    f"<b>Дата:</b> {context.user_data['date']}\n"
-    f"<b>Время начала:</b> {context.user_data['start_time']}\n"
-    f"<b>Место:</b> {context.user_data['place']}\n"
-    f"<b>Имя:</b> {context.user_data['name']}\n"
-    f"<b>Телефон:</b> {context.user_data['phone']}\n"
-    f"<b>Ожидаемое количество:</b> {context.user_data['people']}\n"
-    f"<b>Описание:</b>\n{context.user_data['description']}"
-)
+        f"<b>📥 Новая заявка #{event_id}</b>\n\n"
+        f"<b>Тип:</b> {context.user_data['type']}\n"
+        f"<b>Категория:</b> {context.user_data['category']}\n"
+        f"<b>Дата:</b> {context.user_data['date']}\n"
+        f"<b>Время:</b> {context.user_data['start_time']}\n"
+        f"<b>Место:</b> {context.user_data['place']}\n"
+        f"<b>Имя:</b> {context.user_data['name']}\n"
+        f"<b>Телефон:</b> {context.user_data['phone']}\n"
+        f"<b>Описание:</b>\n{context.user_data['description']}"
+    )
 
     await context.bot.send_message(
         chat_id=GROUP_CHAT_ID,
@@ -325,54 +360,37 @@ def normalize_phone(raw_phone: str) -> str:
 
     return None
 
-def generate_event_id(sheet):
-    chars = string.digits + string.ascii_uppercase
-    existing_ids = set(sheet.col_values(1))
-
-    while True:
-        raw = uuid.uuid4().int
-        event_id = ""
-
-        while raw > 0 and len(event_id) < 5:
-            raw, i = divmod(raw, 36)
-            event_id = chars[i] + event_id
-
-        event_id = event_id.zfill(5)
-
-        if event_id not in existing_ids:
-            return event_id
-
 def main():
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Главное меню
+    loop = asyncio.get_event_loop()
+    pool = loop.run_until_complete(get_pool())
+    app.bot_data["db_pool"] = pool
+
     app.add_handler(CommandHandler("start", start))
 
-    # Conversation Handler
     conv = ConversationHandler(
-    entry_points=[
-        MessageHandler(
-            filters.Regex("^🚀 Старт заявки$"),
-            start_application
-        )
-    ],
-    states={
-        TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_type)],
-        CATEGORY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_category)],
-        DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_date)],
-        TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_time)],  # ← ОБЯЗАТЕЛЬНО
-        PLACE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_place)],
-        NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
-        PHONE: [MessageHandler(filters.TEXT | filters.CONTACT, get_phone)],
-        DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_description)],
-        PEOPLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_people)],
-        CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_application)],
-    },
-    fallbacks=[
-        CommandHandler("cancel", cancel)
-    ],
-)
+        entry_points=[
+            MessageHandler(
+                filters.Regex("^🚀 Старт заявки$"),
+                start_application
+            )
+        ],
+        states={
+            TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_type)],
+            CATEGORY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_category)],
+            DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_date)],
+            TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_time)],
+            PLACE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_place)],
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+            PHONE: [MessageHandler(filters.TEXT | filters.CONTACT, get_phone)],
+            DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_description)],
+            PEOPLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_people)],
+            CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_application)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+    )
 
     app.add_handler(conv)
 
