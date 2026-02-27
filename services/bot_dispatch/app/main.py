@@ -1,19 +1,19 @@
-import asyncio
 from telegram.ext import ApplicationBuilder
 from .config import BOT_TOKEN, CHECK_INTERVAL
 from .event_monitor import monitor_events
 from .bot_photographers import register_handlers
 from core.db.pool import get_pool
+import asyncio
 
 
-async def main():
-
-    print("BOT B STARTING")
+def main():
+    print("BOT B STARTING", flush=True)
 
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # создаём пул PostgreSQL
-    pool = await get_pool()
+    loop = asyncio.get_event_loop()
+    pool = loop.run_until_complete(get_pool())
+
     application.bot_data["db_pool"] = pool
 
     register_handlers(application)
@@ -25,8 +25,9 @@ async def main():
         first=10
     )
 
-    await application.run_polling()
+    application.run_polling()
 
 
+# ↓↓↓ ВОТ ЗДЕСЬ ↓↓↓
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
