@@ -1,32 +1,47 @@
-from datetime import datetime
-from core.sheets_client import get_worksheet
-from core.id_service import generate_event_id
+import asyncpg
+import os
+import random
+import string
 
-BOOK_NAME = "Order_Yakutia.media"
-SHEET_NAME = "СОБЫТИЯ"
 
-def create_event(data: dict):
+def generate_event_id():
+    chars = string.digits + string.ascii_uppercase
+    return ''.join(random.choices(chars, k=5))
 
-    sheet = get_worksheet(BOOK_NAME, SHEET_NAME)
 
-    event_id = generate_event_id(sheet)
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+async def create_event(pool, data):
 
-    row = [
-        event_id,
-        now,
-        "создано",
-        data["type"],
-        data["category"],
-        data["date"],
-        data["start_time"],
-        data["place"],
-        data["people"],
-        data["name"],
-        data["phone"],
-        data["description"]
-    ]
+    event_id = generate_event_id()
 
-    sheet.append_row(row)
+    async with pool.acquire() as conn:
+
+        await conn.execute(
+            """
+            INSERT INTO events(
+                id,
+                event_date,
+                start_time,
+                location,
+                type,
+                category,
+                description,
+                client_name,
+                client_phone,
+                required_photographers,
+                status
+            )
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'в работу')
+            """,
+            event_id,
+            data["date"],
+            data["start_time"],
+            data["place"],
+            data["type"],
+            data["category"],
+            data["description"],
+            data["name"],
+            data["phone"],
+            1
+        )
 
     return event_id
