@@ -3,6 +3,8 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 async def monitor_events(context):
 
+    print("ADMIN MONITOR TICK", flush=True)
+
     pool = context.application.bot_data["db_pool"]
     bot = context.application.bot
 
