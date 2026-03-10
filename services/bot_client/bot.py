@@ -283,6 +283,18 @@ async def confirm_application(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     event_id = generate_event_id()
 
+    # преобразуем дату
+    event_date = datetime.strptime(
+        context.user_data["date"],
+        "%d.%m.%Y"
+    ).date()
+
+    # преобразуем время
+    start_time = datetime.strptime(
+        context.user_data["start_time"],
+        "%H:%M"
+    ).time()
+
     async with pool.acquire() as conn:
 
         await conn.execute("""
@@ -302,15 +314,15 @@ async def confirm_application(update: Update, context: ContextTypes.DEFAULT_TYPE
             VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'в работу')
         """,
             event_id,
-            context.user_data["date"],
-            context.user_data["start_time"],
+            event_date,
+            start_time,
             context.user_data["place"],
             context.user_data["type"],
             context.user_data["category"],
             context.user_data["description"],
             context.user_data["name"],
             context.user_data["phone"],
-            1   # ← количество фотографов по умолчанию
+            1
         )
 
     message = (
