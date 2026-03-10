@@ -311,7 +311,7 @@ async def confirm_application(update: Update, context: ContextTypes.DEFAULT_TYPE
                 required_photographers,
                 status
             )
-            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'в работу')
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'новое')
         """,
             event_id,
             event_date,
