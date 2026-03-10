@@ -27,6 +27,8 @@ async def get_pool():
 
 def main():
 
+    print("BOT C STARTING", flush=True)
+
     app = ApplicationBuilder().token(
         os.getenv("BOT_TOKEN")
     ).build()
@@ -45,12 +47,16 @@ def main():
     app.add_handler(
         CallbackQueryHandler(send_to_work, pattern="work_")
     )
-
+    
+    print("HANDLERS REGISTERED", flush=True)
+    
     app.job_queue.run_repeating(
         monitor_events,
         interval=10,
         first=10
     )
+
+    print("MONITOR STARTED", flush=True)
 
     app.run_polling()
 
