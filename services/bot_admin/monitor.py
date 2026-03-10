@@ -17,6 +17,8 @@ async def monitor_events(context):
             AND admin_id IS NULL
         """)
 
+        print("WAITING EVENTS:", len(events), flush=True)
+
         if not events:
             return
 
@@ -27,6 +29,8 @@ async def monitor_events(context):
             ORDER BY last_activity ASC
             LIMIT 1
         """)
+
+        print("ADMIN FOUND:", admin, flush=True)
 
         if not admin:
             return
