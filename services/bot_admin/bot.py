@@ -6,12 +6,15 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
     MessageHandler,
+    CommandHandler,
     filters
 )
 
 from .monitor import monitor_events
 
 from .handlers import (
+    start,
+    current_events,
     open_event,
     confirm_event,
     ask_photographers,
@@ -60,9 +63,12 @@ def main():
         },
         fallbacks=[]
     )
+    app.add_handler(CommandHandler("start", start))
 
+    app.add_handler(CallbackQueryHandler(current_events, pattern="^current_events$"))
     app.add_handler(CallbackQueryHandler(open_event, pattern="^open_event:"))
     app.add_handler(CallbackQueryHandler(my_events, pattern="^my_events$"))
+
     app.add_handler(conv_confirm_event)
 
     print("HANDLERS REGISTERED", flush=True)
@@ -75,7 +81,7 @@ def main():
 
     print("MONITOR STARTED", flush=True)
 
-    app.run_polling()
+    app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":

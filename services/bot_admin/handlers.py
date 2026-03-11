@@ -15,6 +15,19 @@ ASK_DURATION = 2
 ASK_ADMIN_COMMENT = 3
 CONFIRM_START = 4
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    keyboard = [
+        [InlineKeyboardButton("Текущие заявки", callback_data="current_events")],
+        [InlineKeyboardButton("Мои заказы", callback_data="my_events")]
+    ]
+
+    await update.message.reply_text(
+        "Панель администратора",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
 async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
