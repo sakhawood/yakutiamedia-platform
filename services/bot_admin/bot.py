@@ -14,6 +14,9 @@ from .monitor import monitor_events
 
 from .handlers import (
     start,
+    activate_session,
+    close_session,
+    admin_menu,
     current_events,
     open_event,
     confirm_event,
