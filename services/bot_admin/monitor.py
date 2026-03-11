@@ -67,19 +67,15 @@ async def monitor_events(context):
                 ]
             ]
 
-            text = f"""
-Новая заявка
-
-ID: {event_id}
-
-Тип: {event['type']}
-Категория: {event['category']}
-
-Дата: {event['event_date']}
-Время: {event['start_time']}
-
-Место: {event['location']}
-"""
+            text = (
+                f"📥 Новая заявка\n\n"
+                f"ID: {event_id}\n\n"
+                f"Тип: {event['type']}\n"
+                f"Категория: {event['category']}\n\n"
+                f"Дата: {event['event_date']}\n"
+                f"Время: {event['start_time']}\n\n"
+                f"Место: {event['location']}"
+            )
 
             await bot.send_message(
                 chat_id=admin_id,
