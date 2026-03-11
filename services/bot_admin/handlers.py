@@ -15,18 +15,64 @@ ASK_DURATION = 2
 ASK_ADMIN_COMMENT = 3
 CONFIRM_START = 4
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
+async def start(update, context):
     keyboard = [
-        [InlineKeyboardButton("Текущие заявки", callback_data="current_events")],
-        [InlineKeyboardButton("Мои заказы", callback_data="my_events")]
+        [InlineKeyboardButton("Активировать панель", callback_data="activate_admin")]
     ]
-
     await update.message.reply_text(
         "Панель администратора",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+async def activate_session(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            UPDATE admins
+            SET active=TRUE
+            WHERE telegram_id=$1
+            """,
+            query.from_user.id
+        )
+
+    await admin_menu(update, context)
+
+async def close_session(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            UPDATE admins
+            SET active=FALSE
+            WHERE telegram_id=$1
+            """,
+            query.from_user.id
+        )
+
+    await query.edit_message_text("Сессия администратора закрыта")
+
+async def admin_menu(update, context):
+    query = update.callback_query
+
+    keyboard = [
+        [InlineKeyboardButton("Текущие заявки", callback_data="current_events")],
+        [InlineKeyboardButton("Мои заказы", callback_data="my_events")],
+        [InlineKeyboardButton("Закрыть сессию", callback_data="close_admin")]
+    ]
+
+    await query.edit_message_text(
+        "Панель администратора",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+  
 
 async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -106,7 +152,7 @@ async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Подтвердить заказ", callback_data=f"confirm_event:{event_id}")],
         [InlineKeyboardButton("Изменить заказ", callback_data=f"edit_event:{event_id}")],
         [InlineKeyboardButton("Удалить заказ", callback_data=f"delete_event:{event_id}")],
-        [InlineKeyboardButton("Назад", callback_data="current_events")],
+        [InlineKeyboardButton("Назад", callback_data="my_events")],
     ]
 
     await query.edit_message_text(
@@ -143,6 +189,15 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     pool = await get_pool()
 
+    row = await conn.fetchrow(
+        "SELECT admin_id FROM events WHERE id=$1",
+        event_id
+    )
+
+    if row["admin_id"] != admin_id:
+        await query.edit_message_text("Этот заказ закреплен за другим администратором")
+        return ConversationHandler.END
+
     async with pool.acquire() as conn:
 
         result = await conn.execute(
@@ -150,7 +205,6 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
             UPDATE events
             SET admin_id=$1
             WHERE id=$2
-            AND admin_id IS NULL
             """,
             admin_id,
             event_id
@@ -334,7 +388,10 @@ async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for r in rows:
 
-        text = f"{r['id']} | {r['event_date']} {r['start_time']} | {r['status']}"
+        date = str(r["event_date"])
+        time = str(r["start_time"])[:5]
+
+        text = f"{date} {time} | {r['status']} | {r['id']}"
 
         keyboard.append([
             InlineKeyboardButton(

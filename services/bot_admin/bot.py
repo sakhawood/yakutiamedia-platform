@@ -65,9 +65,21 @@ def main():
     )
     app.add_handler(CommandHandler("start", start))
 
+    app.add_handler(CallbackQueryHandler(activate_session, pattern="^activate_admin$"))
+    app.add_handler(CallbackQueryHandler(close_session, pattern="^close_admin$"))
+    app.add_handler(CallbackQueryHandler(admin_menu, pattern="^admin_menu$"))
+
     app.add_handler(CallbackQueryHandler(current_events, pattern="^current_events$"))
     app.add_handler(CallbackQueryHandler(open_event, pattern="^open_event:"))
     app.add_handler(CallbackQueryHandler(my_events, pattern="^my_events$"))
+
+    app.add_handler(
+        CallbackQueryHandler(delete_event, pattern="^delete_event:")
+    )
+
+    app.add_handler(
+        CallbackQueryHandler(edit_event, pattern="^edit_event:")
+)
 
     app.add_handler(conv_confirm_event)
 
