@@ -1,44 +1,72 @@
 import os
-import asyncpg
+from core.db.init_db import ensure_indexes
+
 from telegram.ext import (
     ApplicationBuilder,
-    CallbackQueryHandler
+    CallbackQueryHandler,
+    ConversationHandler,
+    MessageHandler,
+    filters
 )
 
 from .monitor import monitor_events
-from .handlers import open_event, send_to_work
 
-
-_pool = None
-
-
-async def get_pool():
-
-    global _pool
-
-    if _pool is None:
-        _pool = await asyncpg.create_pool(
-            dsn=os.getenv("DATABASE_URL"),
-            ssl="require"
-        )
-
-    return _pool
+from .handlers import (
+    open_event,
+    send_to_work,
+    confirm_event,
+    ask_photographers,
+    ask_duration,
+    ask_admin_comment,
+    start_event,
+    my_events,
+    ASK_PHOTOGRAPHERS,
+    ASK_DURATION,
+    ASK_ADMIN_COMMENT,
+    CONFIRM_START
+)
 
 
 def main():
 
     print("BOT C STARTING", flush=True)
 
+    import asyncio
+    asyncio.run(ensure_indexes())
+
     app = ApplicationBuilder().token(
         os.getenv("BOT_TOKEN")
     ).build()
 
-    import asyncio
 
-    loop = asyncio.get_event_loop()
-    pool = loop.run_until_complete(get_pool())
+    conv_confirm_event = ConversationHandler(
 
-    app.bot_data["db_pool"] = pool
+        entry_points=[
+            CallbackQueryHandler(confirm_event, pattern="^confirm_event:")
+        ],
+
+        states={
+
+            ASK_PHOTOGRAPHERS: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, ask_photographers)
+            ],
+
+            ASK_DURATION: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, ask_duration)
+            ],
+
+            ASK_ADMIN_COMMENT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, ask_admin_comment)
+            ],
+
+            CONFIRM_START: [
+                CallbackQueryHandler(start_event, pattern="^start_event$")
+            ],
+        },
+
+        fallbacks=[]
+    )
+
 
     app.add_handler(
         CallbackQueryHandler(open_event, pattern="open_")
@@ -47,9 +75,15 @@ def main():
     app.add_handler(
         CallbackQueryHandler(send_to_work, pattern="work_")
     )
-    
+
+    app.add_handler(
+        CallbackQueryHandler(my_events, pattern="^my_events$")
+    )
+
+    app.add_handler(conv_confirm_event)
+
     print("HANDLERS REGISTERED", flush=True)
-    
+
     app.job_queue.run_repeating(
         monitor_events,
         interval=10,

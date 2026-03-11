@@ -2,17 +2,7 @@ import sys
 import os
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 sys.path.append(BASE_DIR)
-import datetime
-import json
-import uuid
-import string
-import asyncio
-import asyncpg
-import random
-import string
-from core.event_service import create_event
 from datetime import datetime
-from telegram.ext import MessageHandler
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram import Update
 from telegram.ext import (
@@ -22,26 +12,15 @@ from telegram.ext import (
 )
 from core.id_service import generate_event_id
 from core.utils import normalize_phone
+from core.db.pool import get_pool
 
 # ==== ВСТАВЬТЕ СВОЙ ТОКЕН ====
 # import os наверху есть по этому выключил
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GROUP_CHAT_ID = -1003824519107 # позже вставим
 
-_pool = None
 
-async def get_pool():
-    global _pool
-    if _pool is None:
-        _pool = await asyncpg.create_pool(
-            dsn=os.getenv("DATABASE_URL"),
-            ssl="require"
-        )
-    return _pool
 
-def generate_event_id():
-    chars = string.digits + string.ascii_uppercase
-    return ''.join(random.choices(chars, k=5))
 
 TYPE, CATEGORY, DATE, TIME, PLACE, PEOPLE, NAME, PHONE, DESCRIPTION, CONFIRM = range(10)
 
@@ -185,14 +164,12 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return PHONE
 
-import re
-
 async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    if update.message.contact:
+    if update.message.contact is not None:
         raw_phone = update.message.contact.phone_number
     else:
-        raw_phone = update.message.text
+        raw_phone = update.message.text or ""
 
     normalized = normalize_phone(raw_phone)
 
@@ -279,7 +256,7 @@ async def confirm_application(update: Update, context: ContextTypes.DEFAULT_TYPE
     if choice != "✅ Подтвердить":
         return CONFIRM
 
-    pool = context.application.bot_data["db_pool"]
+    pool = await get_pool()
 
     event_id = generate_event_id()
 
@@ -356,29 +333,10 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Отменено.")
     return ConversationHandler.END
 
-def normalize_phone(raw_phone: str) -> str:
-
-    # Убираем пробелы, скобки, дефисы
-    digits = "".join(filter(str.isdigit, raw_phone))
-
-    if digits.startswith("8") and len(digits) == 11:
-        digits = "7" + digits[1:]
-
-    if digits.startswith("7") and len(digits) == 11:
-        return "+7" + digits[1:]
-
-    if digits.startswith("9") and len(digits) == 10:
-        return "+7" + digits
-
-    return None
 
 def main():
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    loop = asyncio.get_event_loop()
-    pool = loop.run_until_complete(get_pool())
-    app.bot_data["db_pool"] = pool
 
     app.add_handler(CommandHandler("start", start))
 

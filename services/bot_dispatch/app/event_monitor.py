@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+from core.db.pool import get_pool
 
 TIMEOUT_MINUTES = 3
 
@@ -7,7 +8,7 @@ async def monitor_events(context):
 
     print("MONITOR TICK", flush=True)
 
-    pool = context.application.bot_data["db_pool"]
+    pool = await get_pool()
     bot = context.application.bot
 
     try:
@@ -67,7 +68,7 @@ async def monitor_events(context):
                     next_priority = priority_list[0]
                 else:
                     if started_at:
-                        delta = datetime.utcnow() - started_at
+                        delta = datetime.now() - started_at
                         if delta < timedelta(minutes=TIMEOUT_MINUTES):
                             print("WAITING TIMEOUT...", flush=True)
                             continue

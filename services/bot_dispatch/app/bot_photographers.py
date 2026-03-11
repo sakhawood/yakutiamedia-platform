@@ -5,6 +5,7 @@ from telegram.ext import CallbackQueryHandler
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import MessageHandler, filters
 from datetime import datetime
+from core.db.pool import get_pool
 
 
 GROUP_CHAT_ID = -1003824519107 # ← вставь реальный ID группы заявки_Yakutia.media
@@ -14,7 +15,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user = update.effective_user
     tg_id = user.id
-    pool = context.bot_data["db_pool"]
+    pool = await get_pool()
 
     async with pool.acquire() as conn:
 
@@ -218,9 +219,10 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         async with conn.transaction():
 
             event = await conn.fetchrow("""
-                SELECT *
-                FROM events
-                WHERE id=$1
+                SELECT COUNT(*)
+                FROM assignments
+                WHERE event_id=$1
+                AND status='accepted'
                 FOR UPDATE
             """, event_id)
 
@@ -307,6 +309,7 @@ async def cancel_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 UPDATE events
                 SET status='в работу'
                 WHERE id=$1
+                AND status!='завершено'
             """, event_id)
 
     await query.edit_message_text(
