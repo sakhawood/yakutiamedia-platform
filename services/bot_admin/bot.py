@@ -20,6 +20,7 @@ from .handlers import (
     current_events,
     open_event,
     confirm_event,
+    delete_event,
     ask_photographers,
     ask_duration,
     ask_admin_comment,
