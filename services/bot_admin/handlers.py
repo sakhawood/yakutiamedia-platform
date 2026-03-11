@@ -181,6 +181,18 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.edit_message_text("Заказ удалён")
 
+async def edit_event(update, context):
+
+    query = update.callback_query
+    await query.answer()
+
+    event_id = query.data.split(":")[1]
+
+    await query.edit_message_text(
+        f"Редактирование заказа {event_id} пока не реализовано"
+    )
+
+
 async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
