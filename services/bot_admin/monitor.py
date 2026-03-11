@@ -12,7 +12,13 @@ async def monitor_events(context):
     async with pool.acquire() as conn:
 
         events = await conn.fetch("""
-            SELECT id, event_date, start_time
+            SELECT
+                id,
+                type,
+                category,
+                location,
+                event_date,
+                start_time
             FROM events
             WHERE status='waiting'
             AND admin_id IS NULL
