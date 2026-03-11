@@ -69,7 +69,9 @@ def main():
         fallbacks=[]
     )
     app.add_handler(CommandHandler("start", start))
-
+    app.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, text_router)
+    )
     app.add_handler(CallbackQueryHandler(activate_session, pattern="^activate_admin$"))
     app.add_handler(CallbackQueryHandler(close_session, pattern="^close_admin$"))
     app.add_handler(CallbackQueryHandler(admin_menu, pattern="^admin_menu$"))

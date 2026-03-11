@@ -1,5 +1,5 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-
+from telegram import ReplyKeyboardMarkup
 from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
@@ -15,14 +15,39 @@ ASK_DURATION = 2
 ASK_ADMIN_COMMENT = 3
 CONFIRM_START = 4
 
-async def start(update, context):
+def admin_keyboard():
+
     keyboard = [
-        [InlineKeyboardButton("Активировать панель", callback_data="activate_admin")]
+        ["Текущие заявки"],
+        ["Мои заказы"],
+        ["Закрыть сессию"]
     ]
+
+    return ReplyKeyboardMarkup(
+        keyboard,
+        resize_keyboard=True,
+        is_persistent=True
+    )
+
+async def start(update, context):
+
     await update.message.reply_text(
         "Панель администратора",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        reply_markup=admin_keyboard()
     )
+
+async def text_router(update, context):
+
+    text = update.message.text
+
+    if text == "Текущие заявки":
+        return await current_events(update, context)
+
+    if text == "Мои заказы":
+        return await my_events(update, context)
+
+    if text == "Закрыть сессию":
+        await update.message.reply_text("Сессия закрыта")
 
 async def activate_session(update, context):
     query = update.callback_query
@@ -93,7 +118,12 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     if not rows:
-        await query.edit_message_text("Нет новых заявок")
+        await query.edit_message_text(
+            "Нет новых заявок",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Назад", callback_data="admin_menu")]
+            ])
+        )
         return
 
     keyboard = []
