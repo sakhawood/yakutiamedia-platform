@@ -61,7 +61,7 @@ def main():
         fallbacks=[]
     )
 
-    app.add_handler(CallbackQueryHandler(open_event, pattern="open_"))
+    app.add_handler(CallbackQueryHandler(open_event, pattern="^open_event:"))
     app.add_handler(CallbackQueryHandler(my_events, pattern="^my_events$"))
     app.add_handler(conv_confirm_event)
 

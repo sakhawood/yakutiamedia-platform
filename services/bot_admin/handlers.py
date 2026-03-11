@@ -55,7 +55,13 @@ async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    event_id = query.data.replace("open_event:", "", 1)
+    data = query.data.split(":")
+
+    if len(data) < 2:
+        await query.answer("Ошибка данных", show_alert=True)
+        return
+
+    event_id = data[1]
 
     pool = await get_pool()
 

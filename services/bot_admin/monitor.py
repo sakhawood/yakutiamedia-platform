@@ -62,7 +62,7 @@ async def monitor_events(context):
                 [
                     InlineKeyboardButton(
                         "Открыть заявку",
-                        callback_data=f"open_{event_id}"
+                        callback_data=f"open_event:{event_id}"
                     )
                 ]
             ]
