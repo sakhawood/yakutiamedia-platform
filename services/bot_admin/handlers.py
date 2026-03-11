@@ -55,9 +55,9 @@ async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    event_id = query.data.split(":")[1]
+    event_id = query.data.replace("open_event:", "", 1)
 
-    pool = get_pool()
+    pool = await get_pool()
 
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -101,7 +101,7 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     event_id = query.data.split(":")[1]
 
-    pool = get_pool()
+    pool = await get_pool()
 
     async with pool.acquire() as conn:
         await conn.execute(
@@ -115,11 +115,6 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.edit_message_text("Заказ удалён")
 
-    await current_events(update, context)
-    return
-
-    return await current_events(update, context)
-
 async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -127,7 +122,7 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     event_id = query.data.split(":")[1]
     admin_id = query.from_user.id
 
-    pool = get_pool()
+    pool = await get_pool()
 
     async with pool.acquire() as conn:
 
@@ -171,7 +166,7 @@ async def ask_photographers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ASK_PHOTOGRAPHERS
 
 
-    pool = get_pool()
+    pool = await get_pool()
 
     async with pool.acquire() as conn:
         await conn.execute(
@@ -202,7 +197,7 @@ async def ask_duration(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     duration = int(duration)
 
-    pool = get_pool()
+    pool = await get_pool()
 
     async with pool.acquire() as conn:
         await conn.execute(
@@ -227,7 +222,7 @@ async def ask_admin_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     comment = update.message.text
 
-    pool = get_pool()
+    pool = await get_pool()
 
     async with pool.acquire() as conn:
         await conn.execute(
@@ -274,7 +269,7 @@ async def start_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("Ошибка: заказ не найден")
         return ConversationHandler.END
 
-    pool = get_pool()
+    pool = await get_pool()
 
     async with pool.acquire() as conn:
         await conn.execute(
@@ -298,7 +293,7 @@ async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     admin_id = query.from_user.id
-    pool = get_pool()
+    pool = await get_pool()
 
     async with pool.acquire() as conn:
         rows = await conn.fetch(
