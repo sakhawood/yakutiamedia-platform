@@ -44,7 +44,7 @@ async def text_router(update, context):
         return await current_events(update, context)
 
     if text == "Мои заказы":
-        return await my_events(update, context)
+        await my_events(update, context)
 
     if text == "Закрыть сессию":
         await update.message.reply_text("Сессия закрыта")
@@ -406,7 +406,25 @@ async def start_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
-    await query.answer()
+
+    if query:
+        await query.answer()
+        message = query.message
+    else:
+        message = update.message
+
+    events = get_admin_events()   # ваша функция получения заказов
+
+        if not events:
+            await message.reply_text("У вас нет заказов")
+            return
+
+        text = "Ваши заказы:\n"
+
+        for e in events:
+            text += f"{e['id']} | {e['status']}\n"
+
+        await message.reply_text(text)
 
     admin_id = query.from_user.id
     pool = await get_pool()
