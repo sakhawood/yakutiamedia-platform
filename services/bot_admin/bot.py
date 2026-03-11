@@ -31,7 +31,10 @@ def main():
     print("BOT C STARTING", flush=True)
 
     import asyncio
-    asyncio.run(ensure_indexes())
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(ensure_indexes())
 
     app = ApplicationBuilder().token(
         os.getenv("BOT_TOKEN")
@@ -58,14 +61,8 @@ def main():
         fallbacks=[]
     )
 
-    app.add_handler(
-        CallbackQueryHandler(open_event, pattern="open_")
-    )
-
-    app.add_handler(
-        CallbackQueryHandler(my_events, pattern="^my_events$")
-    )
-
+    app.add_handler(CallbackQueryHandler(open_event, pattern="open_"))
+    app.add_handler(CallbackQueryHandler(my_events, pattern="^my_events$"))
     app.add_handler(conv_confirm_event)
 
     print("HANDLERS REGISTERED", flush=True)
@@ -79,7 +76,6 @@ def main():
     print("MONITOR STARTED", flush=True)
 
     app.run_polling()
-
 
 
 if __name__ == "__main__":
