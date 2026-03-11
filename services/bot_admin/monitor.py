@@ -1,20 +1,22 @@
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+from core.db.pool import get_pool
 
 
 async def monitor_events(context):
 
     print("ADMIN MONITOR TICK", flush=True)
 
-    pool = context.application.bot_data["db_pool"]
+    pool = await get_pool()
     bot = context.application.bot
 
     async with pool.acquire() as conn:
 
         events = await conn.fetch("""
-            SELECT *
+            SELECT id, event_date, start_time
             FROM events
             WHERE status='waiting'
             AND admin_id IS NULL
+            ORDER BY event_date
         """)
 
         print("WAITING EVENTS:", len(events), flush=True)
