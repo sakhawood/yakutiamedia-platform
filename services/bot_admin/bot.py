@@ -27,6 +27,7 @@ from .handlers import (
     ask_admin_comment,
     start_event,
     my_events,
+    text_router,
     ASK_PHOTOGRAPHERS,
     ASK_DURATION,
     ASK_ADMIN_COMMENT,
