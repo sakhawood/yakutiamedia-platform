@@ -41,12 +41,12 @@ async def text_router(update, context):
     text = update.message.text
 
     if text == "Текущие заявки":
-        return await current_events(update, context)
+        await current_events(update, context)
 
-    if text == "Мои заказы":
+    elif text == "Мои заказы":
         await my_events(update, context)
 
-    if text == "Закрыть сессию":
+    elif text == "Закрыть сессию":
         await update.message.reply_text("Сессия закрыта")
 
 async def activate_session(update, context):
