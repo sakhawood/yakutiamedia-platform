@@ -13,7 +13,6 @@ from .monitor import monitor_events
 
 from .handlers import (
     open_event,
-    send_to_work,
     confirm_event,
     ask_photographers,
     ask_duration,
@@ -38,42 +37,29 @@ def main():
         os.getenv("BOT_TOKEN")
     ).build()
 
-
     conv_confirm_event = ConversationHandler(
-
         entry_points=[
             CallbackQueryHandler(confirm_event, pattern="^confirm_event:")
         ],
-
         states={
-
             ASK_PHOTOGRAPHERS: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, ask_photographers)
             ],
-
             ASK_DURATION: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, ask_duration)
             ],
-
             ASK_ADMIN_COMMENT: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, ask_admin_comment)
             ],
-
             CONFIRM_START: [
                 CallbackQueryHandler(start_event, pattern="^start_event$")
             ],
         },
-
         fallbacks=[]
     )
 
-
     app.add_handler(
         CallbackQueryHandler(open_event, pattern="open_")
-    )
-
-    app.add_handler(
-        CallbackQueryHandler(send_to_work, pattern="work_")
     )
 
     app.add_handler(
@@ -93,6 +79,7 @@ def main():
     print("MONITOR STARTED", flush=True)
 
     app.run_polling()
+
 
 
 if __name__ == "__main__":
