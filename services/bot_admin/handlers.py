@@ -72,6 +72,7 @@ async def admin_menu(update, context):
     await query.edit_message_text(
         "Панель администратора",
         reply_markup=InlineKeyboardMarkup(keyboard)
+    )
   
 
 async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
