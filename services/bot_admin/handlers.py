@@ -262,9 +262,10 @@ async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("Подтвердить заказ", callback_data=f"confirm_event:{event_id}")],
         [InlineKeyboardButton("Изменить заказ", callback_data=f"edit_event:{event_id}")],
-        [InlineKeyboardButton("Удалить заказ", callback_data=f"delete_confirm:{event_id}",
+        [InlineKeyboardButton("Удалить заказ", callback_data=f"delete_confirm:{event_id}")],
         [InlineKeyboardButton("Назад", callback_data=back)],
     ]
+    
 
     await query.edit_message_text(
         text,
