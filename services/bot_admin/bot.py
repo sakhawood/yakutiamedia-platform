@@ -90,6 +90,8 @@ def main():
 
     app.add_handler(CallbackQueryHandler(delete_event, pattern="^delete_event:"))
     app.add_handler(CallbackQueryHandler(edit_event, pattern="^edit_event:"))
+    app.add_handler(CallbackQueryHandler(delete_confirm, pattern="^delete_confirm:"))
+
 
     app.add_handler(conv_confirm_event)
 

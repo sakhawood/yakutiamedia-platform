@@ -262,7 +262,7 @@ async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("Подтвердить заказ", callback_data=f"confirm_event:{event_id}")],
         [InlineKeyboardButton("Изменить заказ", callback_data=f"edit_event:{event_id}")],
-        [InlineKeyboardButton("Удалить заказ", callback_data=f"delete_event:{event_id}")],
+        [InlineKeyboardButton("Удалить заказ", callback_data=f"delete_confirm:{event_id}",
         [InlineKeyboardButton("Назад", callback_data=back)],
     ]
 
@@ -284,6 +284,34 @@ async def edit_event(update, context):
         f"Редактирование заказа {event_id} пока не реализовано"
     )
 
+async def delete_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    query = update.callback_query
+    await query.answer()
+
+    event_id = query.data.split(":")[1]
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "Удалить",
+                callback_data=f"delete_event:{event_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "Отмена",
+                callback_data=f"open_event:{event_id}:my"
+            )
+        ]
+    ]
+
+    await query.edit_message_text(
+        "Вы уверены, что хотите удалить заказ?",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
 async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
@@ -294,6 +322,7 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pool = await get_pool()
 
     async with pool.acquire() as conn:
+
         await conn.execute(
             """
             UPDATE events
@@ -304,15 +333,14 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     keyboard = [
-        [InlineKeyboardButton("Назад", callback_data="admin_menu")]
+        [InlineKeyboardButton("В меню", callback_data="admin_menu")]
     ]
 
-    await update_panel(
-        update,
-        context,
+    await query.edit_message_text(
         "Заказ удалён",
-        InlineKeyboardMarkup(keyboard)
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
 
 
 async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -321,6 +349,7 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     event_id = query.data.split(":")[1]
+    admin_id = query.from_user.id
 
     pool = await get_pool()
 
@@ -328,20 +357,28 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         row = await conn.fetchrow(
             """
-            SELECT status
+            SELECT status, admin_id
             FROM events
             WHERE id=$1
             """,
             event_id
         )
 
-        if not row or row["status"] != "waiting":
+    if not row:
 
-            await query.edit_message_text(
-                "Эта заявка уже обрабатывается"
-            )
+        await query.edit_message_text("Заявка не найдена")
+        return ConversationHandler.END
 
-            return ConversationHandler.END
+
+    # если заказ чужой
+    if row["admin_id"] and row["admin_id"] != admin_id:
+
+        await query.edit_message_text(
+            "Этот заказ закреплен за другим администратором"
+        )
+
+        return ConversationHandler.END
+
 
     context.user_data["event_id"] = event_id
 
@@ -350,6 +387,7 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     return ASK_PHOTOGRAPHERS
+
 
 
 
