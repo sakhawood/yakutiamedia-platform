@@ -103,8 +103,14 @@ async def admin_menu(update, context):
   
 
 async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     query = update.callback_query
-    await query.answer()
+
+    if query:
+        await query.answer()
+        message = query.message
+    else:
+        message = update.message
 
     pool = await get_pool()
 
@@ -120,28 +126,51 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     if not rows:
-        await query.edit_message_text(
-            "Нет новых заявок",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("Назад", callback_data="admin_menu")]
-            ])
-        )
+
+        text = "Нет новых заявок"
+
+        if query:
+            await query.edit_message_text(
+                text,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Назад", callback_data="admin_menu")]
+                ])
+            )
+        else:
+            await message.reply_text(text)
+
         return
 
     keyboard = []
 
     for r in rows:
+
         text = f"{r['event_date']} {str(r['start_time'])[:5]}"
-        keyboard.append(
-            [InlineKeyboardButton(text, callback_data=f"open_event:{r['id']}")]
+
+        keyboard.append([
+            InlineKeyboardButton(
+                text,
+                callback_data=f"open_event:{r['id']}"
+            )
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton("Назад", callback_data="admin_menu")
+    ])
+
+    text = "Новые заявки"
+
+    if query:
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    else:
+        await message.reply_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-    keyboard.append([InlineKeyboardButton("Назад", callback_data="admin_menu")])
-
-    await query.edit_message_text(
-        "Новые заявки",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-    )
 
 async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
