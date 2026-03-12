@@ -77,8 +77,14 @@ async def monitor_events(context):
                 f"Место: {event['location']}"
             )
 
-            await bot.send_message(
+            await bot.edit_message_text(
                 chat_id=admin_id,
+                message_id=panel_message_id,
                 text=text,
-                reply_markup=InlineKeyboardMarkup(keyboard)
+                reply_markup=keyboard
             )
+            try:
+                await bot.edit_message_text(...)
+            except:
+                msg = await bot.send_message(...)
+                context.user_data["panel_message_id"] = msg.message_id

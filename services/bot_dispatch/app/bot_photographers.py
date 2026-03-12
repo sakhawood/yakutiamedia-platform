@@ -213,24 +213,28 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     tg_id = query.from_user.id
     event_id = query.data.replace("accept_", "", 1)
+
     pool = context.bot_data["db_pool"]
 
     async with pool.acquire() as conn:
         async with conn.transaction():
 
+            # Блокируем событие
             event = await conn.fetchrow("""
-                SELECT COUNT(*)
-                FROM assignments
-                WHERE event_id=$1
-                AND status='accepted'
+                SELECT *
+                FROM events
+                WHERE id=$1
                 FOR UPDATE
             """, event_id)
 
             if not event:
-                await query.answer("Событие не найдено.", show_alert=True)
+                await query.answer(
+                    "Событие не найдено.",
+                    show_alert=True
+                )
                 return
 
-            # Проверка: уже принял?
+            # Проверяем уже принял ли фотограф
             already = await conn.fetchval("""
                 SELECT 1
                 FROM assignments
@@ -246,7 +250,7 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 return
 
-            # Сколько уже принято
+            # считаем сколько уже принято
             accepted = await conn.fetchval("""
                 SELECT COUNT(*)
                 FROM assignments
@@ -261,7 +265,7 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 return
 
-            # Вставка без ON CONFLICT
+            # записываем принятие
             await conn.execute("""
                 INSERT INTO assignments(
                     event_id,
@@ -272,9 +276,9 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 VALUES($1,$2,'accepted',NOW())
             """, event_id, tg_id)
 
-            # Пересчёт после вставки
             accepted_after = accepted + 1
 
+            # если команда набрана
             if accepted_after >= event["required_photographers"]:
                 await conn.execute("""
                     UPDATE events
@@ -285,6 +289,7 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(
         f"✅ Вы приняли мероприятие {event_id}"
     )
+
 
 async def cancel_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
 

@@ -1,19 +1,4 @@
-from telegram import ReplyKeyboardMarkup
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-
-def admin_keyboard():
-
-    keyboard = [
-        ["📥 Текущие заявки"],
-        ["📂 Мои заказы"],
-        ["🚪 Закрыть сессию"]
-    ]
-
-    return ReplyKeyboardMarkup(
-        keyboard,
-        resize_keyboard=True,
-        is_persistent=True
-    )
 
 def event_keyboard(event_id):
 
