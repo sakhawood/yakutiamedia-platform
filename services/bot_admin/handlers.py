@@ -202,7 +202,7 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([
             InlineKeyboardButton(
                 text,
-                callback_data=f"open_event:{r['id']}"
+                callback_data=f"open_event:{r['id']}:current"
             )
         ])
 
@@ -217,15 +217,17 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardMarkup(keyboard)
     )
 
-
-
-
 async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
     await query.answer()
 
-    event_id = query.data.split(":")[1]
+    data = query.data.split(":")
+
+    event_id = data[1]
+    source = data[2] if len(data) > 2 else "current"
+
+    back = "my_events" if source == "my" else "current_events"
 
     pool = await get_pool()
 
@@ -241,13 +243,8 @@ async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not row:
 
-        await update_panel(
-            update,
-            context,
-            "Заказ не найден",
-            InlineKeyboardMarkup([
-                [InlineKeyboardButton("Назад", callback_data="admin_menu")]
-            ])
+        await query.edit_message_text(
+            "Заказ не найден"
         )
 
         return
@@ -266,15 +263,14 @@ async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Подтвердить заказ", callback_data=f"confirm_event:{event_id}")],
         [InlineKeyboardButton("Изменить заказ", callback_data=f"edit_event:{event_id}")],
         [InlineKeyboardButton("Удалить заказ", callback_data=f"delete_event:{event_id}")],
-        [InlineKeyboardButton("Назад", callback_data="current_events")]
+        [InlineKeyboardButton("Назад", callback_data=back)],
     ]
 
-    await update_panel(
-        update,
-        context,
+    await query.edit_message_text(
         text,
-        InlineKeyboardMarkup(keyboard)
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
 
 
 async def edit_event(update, context):
@@ -325,7 +321,6 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     event_id = query.data.split(":")[1]
-    admin_id = query.from_user.id
 
     pool = await get_pool()
 
@@ -340,24 +335,13 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
             event_id
         )
 
-        if row["status"] != "waiting":
+        if not row or row["status"] != "waiting":
 
             await query.edit_message_text(
                 "Эта заявка уже обрабатывается"
             )
 
             return ConversationHandler.END
-
-        await conn.execute(
-            """
-            UPDATE events
-            SET admin_id=$1,
-                status='assigned'
-            WHERE id=$2
-            """,
-            admin_id,
-            event_id
-        )
 
     context.user_data["event_id"] = event_id
 
@@ -366,6 +350,7 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     return ASK_PHOTOGRAPHERS
+
 
 
 
@@ -482,20 +467,28 @@ async def start_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     event_id = context.user_data.get("event_id")
+    admin_id = query.from_user.id
 
     if not event_id:
-        await query.edit_message_text("Ошибка: заказ не найден")
+
+        await query.edit_message_text(
+            "Ошибка: заказ не найден"
+        )
+
         return ConversationHandler.END
 
     pool = await get_pool()
 
     async with pool.acquire() as conn:
+
         await conn.execute(
             """
             UPDATE events
-            SET status='active'
-            WHERE id=$1
+            SET status='active',
+                admin_id=$1
+            WHERE id=$2
             """,
+            admin_id,
             event_id
         )
 
@@ -511,6 +504,7 @@ async def start_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
 
     return ConversationHandler.END
+
 
 
 async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -565,7 +559,7 @@ async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([
             InlineKeyboardButton(
                 text,
-                callback_data=f"open_event:{r['id']}"
+                callback_data=f"open_event:{r['id']}:my"
             )
         ])
 
