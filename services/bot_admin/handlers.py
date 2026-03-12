@@ -18,12 +18,17 @@ CONFIRM_START = 4
 
 async def start(update, context):
 
+    keyboard = [
+        [InlineKeyboardButton("Открыть сессию", callback_data="activate_admin")]
+    ]
+
     msg = await update.message.reply_text(
-        "Панель администратора",
-        reply_markup=admin_keyboard()
+        "Администраторская панель\n\nСессия закрыта",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
     context.user_data["panel_message_id"] = msg.message_id
+
 
 async def update_panel(update, context, text, keyboard):
 
@@ -61,53 +66,70 @@ async def text_router(update, context):
 
 
 async def activate_session(update, context):
+
     query = update.callback_query
     await query.answer()
+
+    admin_id = query.from_user.id
 
     pool = await get_pool()
 
     async with pool.acquire() as conn:
+
         await conn.execute(
             """
             UPDATE admins
-            SET active=TRUE
+            SET active = TRUE
             WHERE telegram_id=$1
             """,
-            query.from_user.id
+            admin_id
         )
 
-    await admin_menu(update, context)
+    keyboard = [
+        [InlineKeyboardButton("Текущие заявки", callback_data="current_events")],
+        [InlineKeyboardButton("Мои заказы", callback_data="my_events")],
+        [InlineKeyboardButton("Закрыть сессию", callback_data="close_admin")]
+    ]
+
+    await update_panel(
+        update,
+        context,
+        "Сессия администратора открыта",
+        InlineKeyboardMarkup(keyboard)
+    )
+
 
 async def close_session(update, context):
 
     query = update.callback_query
-    user_id = update.effective_user.id
+    await query.answer()
+
+    admin_id = query.from_user.id
 
     pool = await get_pool()
 
     async with pool.acquire() as conn:
+
         await conn.execute(
             """
             UPDATE admins
-            SET active=FALSE
+            SET active = FALSE
             WHERE telegram_id=$1
             """,
-            user_id
+            admin_id
         )
 
-    if query:
-        await query.answer()
+    keyboard = [
+        [InlineKeyboardButton("Открыть сессию", callback_data="activate_admin")]
+    ]
 
-        await query.edit_message_text(
-            "Сессия администратора закрыта",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("Активировать", callback_data="activate_admin")]
-            ])
-        )
-    else:
-        await update.message.reply_text(
-            "Сессия администратора закрыта"
-        )
+    await update_panel(
+        update,
+        context,
+        "Сессия закрыта",
+        InlineKeyboardMarkup(keyboard)
+    )
+
 
 
 async def admin_menu(update, context):
