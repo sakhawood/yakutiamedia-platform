@@ -23,6 +23,7 @@ async def monitor_events(context):
             WHERE status='waiting'
             AND admin_id IS NULL
             ORDER BY event_date
+            LIMIT 1
         """)
 
         print("WAITING EVENTS:", len(events), flush=True)
@@ -58,14 +59,14 @@ async def monitor_events(context):
                 WHERE id=$2
             """, admin_id, event_id)
 
-            keyboard = [
+            keyboard = InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton(
                         "Открыть заявку",
                         callback_data=f"open_event:{event_id}"
                     )
                 ]
-            ]
+            ])
 
             text = (
                 f"📥 Новая заявка\n\n"
@@ -77,14 +78,44 @@ async def monitor_events(context):
                 f"Место: {event['location']}"
             )
 
-            await bot.edit_message_text(
-                chat_id=admin_id,
-                message_id=panel_message_id,
-                text=text,
-                reply_markup=keyboard
-            )
+            panel_message_id = context.application.bot_data.get("panel_message_id")
+            panel_chat_id = context.application.bot_data.get("panel_chat_id")
+
             try:
-                await bot.edit_message_text(...)
-            except:
-                msg = await bot.send_message(...)
-                context.user_data["panel_message_id"] = msg.message_id
+
+                if panel_message_id and panel_chat_id:
+
+                    await bot.edit_message_text(
+                        chat_id=panel_chat_id,
+                        message_id=panel_message_id,
+                        text=text,
+                        reply_markup=keyboard
+                    )
+
+                    print("ADMIN PANEL UPDATED", flush=True)
+
+                else:
+
+                    msg = await bot.send_message(
+                        chat_id=admin_id,
+                        text=text,
+                        reply_markup=keyboard
+                    )
+
+                    context.application.bot_data["panel_message_id"] = msg.message_id
+                    context.application.bot_data["panel_chat_id"] = msg.chat_id
+
+                    print("ADMIN PANEL CREATED", flush=True)
+
+            except Exception as e:
+
+                print("ADMIN PANEL ERROR:", repr(e), flush=True)
+
+                msg = await bot.send_message(
+                    chat_id=admin_id,
+                    text=text,
+                    reply_markup=keyboard
+                )
+
+                context.application.bot_data["panel_message_id"] = msg.message_id
+                context.application.bot_data["panel_chat_id"] = msg.chat_id
