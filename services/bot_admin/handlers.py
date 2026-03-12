@@ -292,24 +292,15 @@ async def delete_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     event_id = query.data.split(":")[1]
 
     keyboard = [
-        [
-            InlineKeyboardButton(
-                "Удалить",
-                callback_data=f"delete_event:{event_id}"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "Отмена",
-                callback_data=f"open_event:{event_id}:my"
-            )
-        ]
+    [InlineKeyboardButton("Удалить", callback_data=f"delete_event:{event_id}")],
+    [InlineKeyboardButton("Отмена", callback_data="my_events")]
     ]
 
     await query.edit_message_text(
         "Вы уверены, что хотите удалить заказ?",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
 
 
 async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
