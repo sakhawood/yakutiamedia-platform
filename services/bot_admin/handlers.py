@@ -1,6 +1,4 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram import ReplyKeyboardMarkup
-from .keyboards import admin_keyboard
 from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
