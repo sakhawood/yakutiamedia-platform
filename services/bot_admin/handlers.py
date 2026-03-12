@@ -18,10 +18,33 @@ CONFIRM_START = 4
 
 async def start(update, context):
 
-    await update.message.reply_text(
+    msg = await update.message.reply_text(
         "Панель администратора",
         reply_markup=admin_keyboard()
     )
+
+    context.user_data["panel_message_id"] = msg.message_id
+
+async def update_panel(update, context, text, keyboard):
+
+    chat_id = update.effective_chat.id
+    message_id = context.user_data.get("panel_message_id")
+
+    if not message_id:
+        msg = await update.effective_message.reply_text(
+            text,
+            reply_markup=keyboard
+        )
+        context.user_data["panel_message_id"] = msg.message_id
+        return
+
+    await context.bot.edit_message_text(
+        chat_id=chat_id,
+        message_id=message_id,
+        text=text,
+        reply_markup=keyboard
+    )
+
 
 async def text_router(update, context):
 
@@ -88,7 +111,6 @@ async def close_session(update, context):
 
 
 async def admin_menu(update, context):
-    query = update.callback_query
 
     keyboard = [
         [InlineKeyboardButton("Текущие заявки", callback_data="current_events")],
@@ -96,9 +118,16 @@ async def admin_menu(update, context):
         [InlineKeyboardButton("Закрыть сессию", callback_data="close_admin")]
     ]
 
-    await query.edit_message_text(
+    query = update.callback_query
+
+    if query:
+        await query.answer()
+
+    await update_panel(
+        update,
+        context,
         "Панель администратора",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        InlineKeyboardMarkup(keyboard)
     )
   
 
@@ -108,9 +137,6 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query:
         await query.answer()
-        message = query.message
-    else:
-        message = update.message
 
     pool = await get_pool()
 
@@ -127,17 +153,16 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not rows:
 
-        text = "Нет новых заявок"
+        keyboard = [
+            [InlineKeyboardButton("Назад", callback_data="admin_menu")]
+        ]
 
-        if query:
-            await query.edit_message_text(
-                text,
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("Назад", callback_data="admin_menu")]
-                ])
-            )
-        else:
-            await message.reply_text(text)
+        await update_panel(
+            update,
+            context,
+            "Нет новых заявок",
+            InlineKeyboardMarkup(keyboard)
+        )
 
         return
 
@@ -158,31 +183,21 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton("Назад", callback_data="admin_menu")
     ])
 
-    text = "Новые заявки"
+    await update_panel(
+        update,
+        context,
+        "Новые заявки",
+        InlineKeyboardMarkup(keyboard)
+    )
 
-    if query:
-        await query.edit_message_text(
-            text,
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-    else:
-        await message.reply_text(
-            text,
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
 
 
 async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     query = update.callback_query
     await query.answer()
 
-    data = query.data.split(":")
-
-    if len(data) < 2:
-        await query.answer("Ошибка данных", show_alert=True)
-        return
-
-    event_id = data[1]
+    event_id = query.data.split(":")[1]
 
     pool = await get_pool()
 
@@ -193,12 +208,21 @@ async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
             FROM events
             WHERE id=$1
             """,
-            event_id,
+            event_id
         )
 
     if not row:
-        await query.edit_message_text("Заказ не найден")
-        return ConversationHandler.END
+
+        await update_panel(
+            update,
+            context,
+            "Заказ не найден",
+            InlineKeyboardMarkup([
+                [InlineKeyboardButton("Назад", callback_data="admin_menu")]
+            ])
+        )
+
+        return
 
     text = (
         f"Заказ №{row['id']}\n\n"
@@ -214,13 +238,16 @@ async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Подтвердить заказ", callback_data=f"confirm_event:{event_id}")],
         [InlineKeyboardButton("Изменить заказ", callback_data=f"edit_event:{event_id}")],
         [InlineKeyboardButton("Удалить заказ", callback_data=f"delete_event:{event_id}")],
-        [InlineKeyboardButton("Назад", callback_data="back_events")],
+        [InlineKeyboardButton("Назад", callback_data="current_events")]
     ]
 
-    await query.edit_message_text(
+    await update_panel(
+        update,
+        context,
         text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        InlineKeyboardMarkup(keyboard)
     )
+
 
 async def edit_event(update, context):
 
@@ -234,6 +261,7 @@ async def edit_event(update, context):
     )
 
 async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     query = update.callback_query
     await query.answer()
 
@@ -248,14 +276,18 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
             SET status='cancelled'
             WHERE id=$1
             """,
-            event_id,
+            event_id
         )
 
-    await query.edit_message_text(
+    keyboard = [
+        [InlineKeyboardButton("Назад", callback_data="admin_menu")]
+    ]
+
+    await update_panel(
+        update,
+        context,
         "Заказ удалён",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("Назад", callback_data="admin_menu")]
-        ])
+        InlineKeyboardMarkup(keyboard)
     )
 
 
@@ -446,12 +478,10 @@ async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
 
-    if not query:
-        return
+    if query:
+        await query.answer()
 
-    await query.answer()
-
-    admin_id = query.from_user.id
+    admin_id = update.effective_user.id
     pool = await get_pool()
 
     async with pool.acquire() as conn:
@@ -467,7 +497,18 @@ async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     if not rows:
-        await query.edit_message_text("У вас нет заказов")
+
+        keyboard = [
+            [InlineKeyboardButton("Назад", callback_data="admin_menu")]
+        ]
+
+        await update_panel(
+            update,
+            context,
+            "У вас нет заказов",
+            InlineKeyboardMarkup(keyboard)
+        )
+
         return
 
     keyboard = []
@@ -477,7 +518,7 @@ async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
         date = str(r["event_date"])
         time = str(r["start_time"])[:5]
 
-        text = f"{date} {time} | {r['status']} | {r['id']}"
+        text = f"{date} {time} | {r['status']}"
 
         keyboard.append([
             InlineKeyboardButton(
@@ -490,7 +531,9 @@ async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton("Назад", callback_data="admin_menu")
     ])
 
-    await query.edit_message_text(
+    await update_panel(
+        update,
+        context,
         "Мои заказы",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        InlineKeyboardMarkup(keyboard)
     )
