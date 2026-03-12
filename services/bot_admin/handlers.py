@@ -18,6 +18,8 @@ CONFIRM_START = 4
 
 async def start(update, context):
 
+    context.user_data.clear()
+
     keyboard = [
         [InlineKeyboardButton("Открыть сессию", callback_data="activate_admin")]
     ]
@@ -28,6 +30,7 @@ async def start(update, context):
     )
 
     context.user_data["panel_message_id"] = msg.message_id
+
 
 async def update_panel(update, context, text, keyboard):
 
@@ -330,7 +333,7 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         row = await conn.fetchrow(
             """
-            SELECT status, admin_id
+            SELECT status
             FROM events
             WHERE id=$1
             """,
@@ -338,10 +341,13 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         if row["status"] != "waiting":
+
             await query.edit_message_text(
                 "Эта заявка уже обрабатывается"
             )
-            return ConversationHandler.END
+
+    return ConversationHandler.END
+
 
         await conn.execute(
             """
@@ -487,17 +493,25 @@ async def start_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await conn.execute(
             """
             UPDATE events
-            SET status='в работу'
+            SET status='active'
             WHERE id=$1
             """,
             event_id
         )
 
+    keyboard = [
+        [InlineKeyboardButton("В меню", callback_data="admin_menu")]
+    ]
+
     await query.edit_message_text(
-        "Заказ отправлен фотографам"
+        "Заказ отправлен фотографам",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+    context.user_data.clear()
+
     return ConversationHandler.END
+
 
 async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
 

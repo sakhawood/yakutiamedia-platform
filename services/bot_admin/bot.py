@@ -68,9 +68,11 @@ def main():
             ],
         },
         fallbacks=[
+            CommandHandler("start", start),
             CallbackQueryHandler(admin_menu, pattern="^admin_menu$")
-        ]
+        ],
     )
+
 
 
     # START
