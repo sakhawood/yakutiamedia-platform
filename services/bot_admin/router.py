@@ -1,4 +1,4 @@
-from .handlers import current_events, my_events
+from .handlers import current_events, my_events, close_session
 
 
 async def text_router(update, context):
