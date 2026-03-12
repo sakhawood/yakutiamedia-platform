@@ -73,6 +73,7 @@ def main():
             CommandHandler("start", start),
             CallbackQueryHandler(admin_menu, pattern="^admin_menu$")
         ],
+        per_message=True
     )
 
 
