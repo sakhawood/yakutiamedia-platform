@@ -164,7 +164,7 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT id, event_date, start_time
+            SELECT id, category, event_date, start_time
             FROM events
             WHERE status='waiting'
             ORDER BY event_date
@@ -190,7 +190,11 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for r in rows:
 
-        text = f"{r['event_date']} {str(r['start_time'])[:5]}"
+        date = str(r["event_date"])
+        time = str(r["start_time"])[:5]
+        category = r["category"]
+
+        text = f"{date} {time} | {category}"
 
         keyboard.append([
             InlineKeyboardButton(
@@ -206,9 +210,10 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update_panel(
         update,
         context,
-        "Новые заявки",
+        "Текущие заявки",
         InlineKeyboardMarkup(keyboard)
     )
+
 
 
 
@@ -507,9 +512,10 @@ async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT id, event_date, start_time, status
+            SELECT id, category, event_date, start_time, status
             FROM events
             WHERE admin_id=$1
+            AND status!='waiting'
             AND status!='cancelled'
             ORDER BY event_date
             """,
@@ -537,8 +543,10 @@ async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         date = str(r["event_date"])
         time = str(r["start_time"])[:5]
+        category = r["category"]
+        status = r["status"]
 
-        text = f"{date} {time} | {r['status']}"
+        text = f"{date} {time} | {category} | {status}"
 
         keyboard.append([
             InlineKeyboardButton(
@@ -557,3 +565,4 @@ async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Мои заказы",
         InlineKeyboardMarkup(keyboard)
     )
+
