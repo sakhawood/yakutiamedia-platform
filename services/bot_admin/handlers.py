@@ -531,7 +531,7 @@ async def start_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await conn.execute(
             """
             UPDATE events
-            SET status='active',
+            SET status='в работу',
                 admin_id=$1
             WHERE id=$2
             """,

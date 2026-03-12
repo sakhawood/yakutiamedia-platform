@@ -8,7 +8,7 @@ async def monitor_events(context):
 
     print("MONITOR TICK", flush=True)
 
-    pool = await get_pool()
+    pool = context.application.bot_data["db_pool"]
     bot = context.application.bot
 
     try:
