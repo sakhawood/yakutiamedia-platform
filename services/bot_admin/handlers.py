@@ -180,11 +180,11 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("Назад", callback_data="admin_menu")]
         ]
 
-        await update_panel(
-            update,
-            context,
+        await query.edit_message_text(
             "Нет новых заявок",
-            InlineKeyboardMarkup(keyboard)
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("В меню", callback_data="admin_menu")]
+            ])
         )
 
         return
@@ -293,8 +293,8 @@ async def delete_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     event_id = query.data.split(":")[1]
 
     keyboard = [
-    [InlineKeyboardButton("Удалить", callback_data=f"delete_event:{event_id}")],
-    [InlineKeyboardButton("Отмена", callback_data="my_events")]
+        [InlineKeyboardButton("Удалить", callback_data=f"delete_event:{event_id}")],
+        [InlineKeyboardButton("Отмена", callback_data="admin_menu")]
     ]
 
     await query.edit_message_text(
@@ -330,7 +330,9 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.edit_message_text(
         "Заказ удалён",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("В меню", callback_data="admin_menu")]
+        ])
     )
 
 
@@ -356,21 +358,35 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
             event_id
         )
 
-    if not row:
+        if not row:
+            await query.edit_message_text("Заявка не найдена")
+            return ConversationHandler.END
 
-        await query.edit_message_text("Заявка не найдена")
-        return ConversationHandler.END
+
+        # если заказ уже в работе
+        if row["status"] != "waiting":
+
+            await query.edit_message_text(
+                "Эта заявка уже обрабатывается",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("В меню", callback_data="admin_menu")]
+                ])
+            )
+
+            return ConversationHandler.END
 
 
-    # если заказ чужой
-    if row["admin_id"] and row["admin_id"] != admin_id:
-
-        await query.edit_message_text(
-            "Этот заказ закреплен за другим администратором"
+        # закрепляем заявку
+        await conn.execute(
+            """
+            UPDATE events
+            SET admin_id=$1,
+                status='assigned'
+            WHERE id=$2
+            """,
+            admin_id,
+            event_id
         )
-
-        return ConversationHandler.END
-
 
     context.user_data["event_id"] = event_id
 
@@ -379,6 +395,7 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     return ASK_PHOTOGRAPHERS
+
 
 
 
@@ -528,9 +545,10 @@ async def start_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.edit_message_text(
         "Заказ отправлен фотографам",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("В меню", callback_data="admin_menu")]
+        ])
     )
-
     context.user_data.clear()
 
     return ConversationHandler.END
@@ -566,11 +584,11 @@ async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("Назад", callback_data="admin_menu")]
         ]
 
-        await update_panel(
-            update,
-            context,
+        await query.edit_message_text(
             "У вас нет заказов",
-            InlineKeyboardMarkup(keyboard)
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("В меню", callback_data="admin_menu")]
+            ])
         )
 
         return
