@@ -1,5 +1,6 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram import ReplyKeyboardMarkup
+from .keyboards import admin_keyboard
 from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
@@ -14,20 +15,6 @@ ASK_PHOTOGRAPHERS = 1
 ASK_DURATION = 2
 ASK_ADMIN_COMMENT = 3
 CONFIRM_START = 4
-
-def admin_keyboard():
-
-    keyboard = [
-        ["Текущие заявки"],
-        ["Мои заказы"],
-        ["Закрыть сессию"]
-    ]
-
-    return ReplyKeyboardMarkup(
-        keyboard,
-        resize_keyboard=True,
-        is_persistent=True
-    )
 
 async def start(update, context):
 
@@ -47,7 +34,8 @@ async def text_router(update, context):
         await my_events(update, context)
 
     elif text == "Закрыть сессию":
-        await update.message.reply_text("Сессия закрыта")
+        await close_session(update, context)
+
 
 async def activate_session(update, context):
     query = update.callback_query
@@ -68,8 +56,9 @@ async def activate_session(update, context):
     await admin_menu(update, context)
 
 async def close_session(update, context):
+
     query = update.callback_query
-    await query.answer()
+    user_id = update.effective_user.id
 
     pool = await get_pool()
 
@@ -80,10 +69,23 @@ async def close_session(update, context):
             SET active=FALSE
             WHERE telegram_id=$1
             """,
-            query.from_user.id
+            user_id
         )
 
-    await query.edit_message_text("Сессия администратора закрыта")
+    if query:
+        await query.answer()
+
+        await query.edit_message_text(
+            "Сессия администратора закрыта",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Активировать", callback_data="activate_admin")]
+            ])
+        )
+    else:
+        await update.message.reply_text(
+            "Сессия администратора закрыта"
+        )
+
 
 async def admin_menu(update, context):
     query = update.callback_query
@@ -129,7 +131,7 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = []
 
     for r in rows:
-        text = f"{r['id']} | {r['event_date']} {r['start_time']}"
+        text = f"{r['event_date']} {str(r['start_time'])[:5]}"
         keyboard.append(
             [InlineKeyboardButton(text, callback_data=f"open_event:{r['id']}")]
         )
@@ -167,7 +169,7 @@ async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not row:
         await query.edit_message_text("Заказ не найден")
-        return
+        return ConversationHandler.END
 
     text = (
         f"Заказ №{row['id']}\n\n"
@@ -183,12 +185,23 @@ async def open_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Подтвердить заказ", callback_data=f"confirm_event:{event_id}")],
         [InlineKeyboardButton("Изменить заказ", callback_data=f"edit_event:{event_id}")],
         [InlineKeyboardButton("Удалить заказ", callback_data=f"delete_event:{event_id}")],
-        [InlineKeyboardButton("Назад", callback_data="my_events")],
+        [InlineKeyboardButton("Назад", callback_data="back_events")],
     ]
 
     await query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard),
+    )
+
+async def edit_event(update, context):
+
+    query = update.callback_query
+    await query.answer()
+
+    event_id = query.data.split(":")[1]
+
+    await query.edit_message_text(
+        f"Редактирование заказа {event_id} пока не реализовано"
     )
 
 async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -209,17 +222,11 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
             event_id,
         )
 
-    await query.edit_message_text("Заказ удалён")
-
-async def edit_event(update, context):
-
-    query = update.callback_query
-    await query.answer()
-
-    event_id = query.data.split(":")[1]
-
     await query.edit_message_text(
-        f"Редактирование заказа {event_id} пока не реализовано"
+        "Заказ удалён",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("Назад", callback_data="admin_menu")]
+        ])
     )
 
 
@@ -232,16 +239,18 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     pool = await get_pool()
 
-    row = await conn.fetchrow(
-        "SELECT admin_id FROM events WHERE id=$1",
-        event_id
-    )
-
-    if row["admin_id"] != admin_id:
-        await query.edit_message_text("Этот заказ закреплен за другим администратором")
-        return ConversationHandler.END
-
     async with pool.acquire() as conn:
+
+        row = await conn.fetchrow(
+            "SELECT admin_id FROM events WHERE id=$1",
+            event_id
+        )
+
+        if row and row["admin_id"] and row["admin_id"] != admin_id:
+            await query.edit_message_text(
+                "Этот заказ закреплен за другим администратором"
+            )
+            return ConversationHandler.END
 
         result = await conn.execute(
             """
@@ -252,6 +261,7 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
             admin_id,
             event_id
         )
+
 
     if result == "UPDATE 0":
         await query.edit_message_text(
@@ -407,24 +417,10 @@ async def my_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
 
-    if query:
-        await query.answer()
-        message = query.message
-    else:
-        message = update.message
+    if not query:
+        return
 
-    events = get_admin_events()   # ваша функция получения заказов
-
-        if not events:
-            await message.reply_text("У вас нет заказов")
-            return
-
-        text = "Ваши заказы:\n"
-
-        for e in events:
-            text += f"{e['id']} | {e['status']}\n"
-
-        await message.reply_text(text)
+    await query.answer()
 
     admin_id = query.from_user.id
     pool = await get_pool()

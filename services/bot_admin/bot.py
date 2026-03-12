@@ -11,6 +11,7 @@ from telegram.ext import (
 )
 
 from .monitor import monitor_events
+from .router import text_router
 
 from .handlers import (
     start,
@@ -27,7 +28,6 @@ from .handlers import (
     ask_admin_comment,
     start_event,
     my_events,
-    text_router,
     ASK_PHOTOGRAPHERS,
     ASK_DURATION,
     ASK_ADMIN_COMMENT,
@@ -49,6 +49,7 @@ def main():
         os.getenv("BOT_TOKEN")
     ).build()
 
+    # FSM подтверждения заказа
     conv_confirm_event = ConversationHandler(
         entry_points=[
             CallbackQueryHandler(confirm_event, pattern="^confirm_event:")
@@ -69,30 +70,36 @@ def main():
         },
         fallbacks=[]
     )
+
+    # START
     app.add_handler(CommandHandler("start", start))
+
+    # Панель администратора (ReplyKeyboard)
     app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, text_router)
     )
+
+    # Inline действия
+    app.add_handler(CallbackQueryHandler(open_event, pattern="^open_event:"))
+    app.add_handler(CallbackQueryHandler(edit_event, pattern="^edit_event:"))
+    app.add_handler(CallbackQueryHandler(delete_event, pattern="^delete_event:"))
+
+    # Навигация
+    app.add_handler(CallbackQueryHandler(current_events, pattern="^current_events$"))
+    app.add_handler(CallbackQueryHandler(current_events, pattern="^back_events$"))
+    app.add_handler(CallbackQueryHandler(my_events, pattern="^my_events$"))
+
+    # Админ сессия
     app.add_handler(CallbackQueryHandler(activate_session, pattern="^activate_admin$"))
     app.add_handler(CallbackQueryHandler(close_session, pattern="^close_admin$"))
     app.add_handler(CallbackQueryHandler(admin_menu, pattern="^admin_menu$"))
 
-    app.add_handler(CallbackQueryHandler(current_events, pattern="^current_events$"))
-    app.add_handler(CallbackQueryHandler(open_event, pattern="^open_event:"))
-    app.add_handler(CallbackQueryHandler(my_events, pattern="^my_events$"))
-
-    app.add_handler(
-        CallbackQueryHandler(delete_event, pattern="^delete_event:")
-    )
-
-    app.add_handler(
-        CallbackQueryHandler(edit_event, pattern="^edit_event:")
-)
-
+    # FSM
     app.add_handler(conv_confirm_event)
 
     print("HANDLERS REGISTERED", flush=True)
 
+    # монитор заявок
     app.job_queue.run_repeating(
         monitor_events,
         interval=10,
