@@ -74,10 +74,6 @@ def main():
     # START
     app.add_handler(CommandHandler("start", start))
 
-    # Панель администратора (ReplyKeyboard)
-    app.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, text_router)
-    )
 
     # Inline действия
     app.add_handler(CallbackQueryHandler(open_event, pattern="^open_event:"))

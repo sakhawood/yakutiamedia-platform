@@ -16,19 +16,6 @@ ASK_DURATION = 2
 ASK_ADMIN_COMMENT = 3
 CONFIRM_START = 4
 
-async def start(update, context):
-
-    keyboard = [
-        [InlineKeyboardButton("Открыть сессию", callback_data="activate_admin")]
-    ]
-
-    msg = await update.message.reply_text(
-        "Администраторская панель\n\nСессия закрыта",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-    context.user_data["panel_message_id"] = msg.message_id
-
 
 async def update_panel(update, context, text, keyboard):
 
