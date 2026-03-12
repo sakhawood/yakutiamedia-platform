@@ -346,8 +346,7 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Эта заявка уже обрабатывается"
             )
 
-    return ConversationHandler.END
-
+            return ConversationHandler.END
 
         await conn.execute(
             """
@@ -367,6 +366,7 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     return ASK_PHOTOGRAPHERS
+
 
 
 async def ask_photographers(update: Update, context: ContextTypes.DEFAULT_TYPE):
