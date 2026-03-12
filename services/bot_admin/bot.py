@@ -68,8 +68,11 @@ def main():
                 CallbackQueryHandler(start_event, pattern="^start_event$")
             ],
         },
-        fallbacks=[]
+        fallbacks=[
+            CallbackQueryHandler(admin_menu, pattern="^admin_menu$")
+        ]
     )
+
 
     # START
     app.add_handler(CommandHandler("start", start))

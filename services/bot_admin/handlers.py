@@ -155,7 +155,6 @@ async def current_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
             SELECT id, event_date, start_time
             FROM events
             WHERE status='waiting'
-            AND admin_id IS NULL
             ORDER BY event_date
             """
         )
@@ -301,6 +300,7 @@ async def delete_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     query = update.callback_query
     await query.answer()
 
@@ -312,32 +312,30 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     async with pool.acquire() as conn:
 
         row = await conn.fetchrow(
-            "SELECT admin_id FROM events WHERE id=$1",
+            """
+            SELECT status, admin_id
+            FROM events
+            WHERE id=$1
+            """,
             event_id
         )
 
-        if row and row["admin_id"] and row["admin_id"] != admin_id:
+        if row["status"] != "waiting":
             await query.edit_message_text(
-                "Этот заказ закреплен за другим администратором"
+                "Эта заявка уже обрабатывается"
             )
             return ConversationHandler.END
 
-        result = await conn.execute(
+        await conn.execute(
             """
             UPDATE events
-            SET admin_id=$1
+            SET admin_id=$1,
+                status='assigned'
             WHERE id=$2
             """,
             admin_id,
             event_id
         )
-
-
-    if result == "UPDATE 0":
-        await query.edit_message_text(
-            "Этот заказ уже взял другой администратор"
-        )
-        return ConversationHandler.END
 
     context.user_data["event_id"] = event_id
 
@@ -346,6 +344,7 @@ async def confirm_event(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     return ASK_PHOTOGRAPHERS
+
 
 async def ask_photographers(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
