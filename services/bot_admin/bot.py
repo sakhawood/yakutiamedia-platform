@@ -22,6 +22,7 @@ from .handlers import (
     confirm_event,
     edit_event,
     delete_event,
+    delete_confirm,
     ask_photographers,
     ask_duration,
     ask_admin_comment,
@@ -32,6 +33,7 @@ from .handlers import (
     ASK_ADMIN_COMMENT,
     CONFIRM_START
 )
+
 
 
 def main():
